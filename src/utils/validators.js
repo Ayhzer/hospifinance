@@ -85,6 +85,36 @@ export const sanitizeString = (str) => {
 };
 
 /**
+ * Valide les données d'une commande
+ * @param {Object} data - Données de la commande
+ * @returns {Object} Résultat de validation {isValid, errors}
+ */
+export const validateOrderData = (data) => {
+  const errors = [];
+
+  if (!data.parentId) {
+    errors.push('Le fournisseur/projet parent est requis');
+  }
+
+  if (!data.description || data.description.trim() === '') {
+    errors.push('La description est requise');
+  }
+
+  if (!data.montant || parseFloat(data.montant) <= 0) {
+    errors.push('Le montant doit être supérieur à 0');
+  }
+
+  if (!data.status) {
+    errors.push('Le statut est requis');
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors
+  };
+};
+
+/**
  * Parse un nombre de manière sécurisée
  * @param {string|number} value - Valeur à parser
  * @param {number} defaultValue - Valeur par défaut

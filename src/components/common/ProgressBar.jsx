@@ -1,17 +1,20 @@
 /**
  * Composant ProgressBar avec indicateur coloré
+ * Lit les seuils depuis le contexte Settings si disponible
  */
 
 import React from 'react';
 import { BUDGET_THRESHOLDS, BUDGET_COLORS } from '../../constants/budgetConstants';
 
-export const ProgressBar = ({ value, showLabel = true, size = 'md' }) => {
+export const ProgressBar = ({ value, showLabel = true, size = 'md', warningThreshold, criticalThreshold }) => {
   const percentage = Math.min(Math.max(value, 0), 100);
 
-  // Déterminer la couleur selon les seuils
+  const warnAt = warningThreshold ?? BUDGET_THRESHOLDS.WARNING;
+  const critAt = criticalThreshold ?? BUDGET_THRESHOLDS.CRITICAL;
+
   const getColor = () => {
-    if (percentage >= BUDGET_THRESHOLDS.CRITICAL) return BUDGET_COLORS.CRITICAL;
-    if (percentage >= BUDGET_THRESHOLDS.WARNING) return BUDGET_COLORS.WARNING;
+    if (percentage >= critAt) return BUDGET_COLORS.CRITICAL;
+    if (percentage >= warnAt) return BUDGET_COLORS.WARNING;
     return BUDGET_COLORS.SAFE;
   };
 

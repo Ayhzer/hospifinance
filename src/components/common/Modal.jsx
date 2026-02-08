@@ -50,21 +50,21 @@ export const Modal = ({
 
   return (
     <div
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-end sm:items-center justify-center p-0 sm:p-4 z-50"
       onClick={(e) => {
         if (closeOnOverlayClick && e.target === e.currentTarget) {
           onClose();
         }
       }}
     >
-      <div className={`bg-white rounded-lg shadow-xl ${sizeClasses[size]} w-full max-h-[90vh] overflow-y-auto`}>
-        <div className="p-6">
+      <div className={`bg-white rounded-t-2xl sm:rounded-lg shadow-xl ${sizeClasses[size]} w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto`}>
+        <div className="p-4 sm:p-6">
           {/* En-tête */}
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="text-2xl font-bold text-gray-800">{title}</h3>
+          <div className="flex justify-between items-start sm:items-center mb-4 sm:mb-6">
+            <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-800 pr-4 leading-tight">{title}</h3>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
+              className="text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0 touch-manipulation p-1"
               aria-label="Fermer"
             >
               <X size={24} />
@@ -72,10 +72,10 @@ export const Modal = ({
           </div>
 
           {/* Contenu */}
-          <div className="mb-6">{children}</div>
+          <div className="mb-4 sm:mb-6">{children}</div>
 
           {/* Footer */}
-          {footer && <div className="flex justify-end gap-3">{footer}</div>}
+          {footer && <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3">{footer}</div>}
         </div>
       </div>
     </div>

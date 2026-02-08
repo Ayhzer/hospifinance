@@ -4,7 +4,7 @@
 
 Application React interactive **optimisée** pour le suivi et le reporting financier d'une Direction des Systèmes d'Information (DSI) hospitalière. Permet de gérer efficacement les budgets OPEX (dépenses d'exploitation) et CAPEX (investissements).
 
-### ⚡ Version 2.0 - Optimisée
+### ⚡ Version 2.0 - Optimisée & Mobile-Ready
 
 Architecture complètement refactorisée avec:
 - 🏗️ **Architecture modulaire** - Composants réutilisables et maintenables
@@ -13,6 +13,7 @@ Architecture complètement refactorisée avec:
 - 📊 **Graphiques interactifs** - Visualisations avec Recharts
 - ✅ **Validation robuste** - Contrôles de saisie avancés
 - 🎨 **UI/UX améliorée** - Modales élégantes et dialogues de confirmation
+- 📱 **100% Responsive** - Optimisé pour smartphones et tablettes (voir [MOBILE_RESPONSIVE.md](MOBILE_RESPONSIVE.md))
 
 ## ✨ Fonctionnalités
 

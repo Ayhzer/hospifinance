@@ -1,34 +1,38 @@
 /**
  * Hook personnalisé pour les calculs budgétaires avec mémorisation
+ * Intègre l'impact des commandes sur les budgets
  */
 
 import { useMemo } from 'react';
 import { calculateTotals } from '../utils/calculations';
+import { computeOrderImpact } from '../utils/orderCalculations';
 
 /**
- * Hook pour calculer les totaux OPEX
+ * Hook pour calculer les totaux OPEX (avec impact commandes)
  */
-export const useOpexTotals = (suppliers) => {
+export const useOpexTotals = (suppliers, opexOrders = []) => {
   return useMemo(() => {
+    const orderImpact = computeOrderImpact(opexOrders);
     return calculateTotals(suppliers, {
       budget: 'budgetAnnuel',
       depense: 'depenseActuelle',
       engagement: 'engagement'
-    });
-  }, [suppliers]);
+    }, orderImpact);
+  }, [suppliers, opexOrders]);
 };
 
 /**
- * Hook pour calculer les totaux CAPEX
+ * Hook pour calculer les totaux CAPEX (avec impact commandes)
  */
-export const useCapexTotals = (projects) => {
+export const useCapexTotals = (projects, capexOrders = []) => {
   return useMemo(() => {
+    const orderImpact = computeOrderImpact(capexOrders);
     return calculateTotals(projects, {
       budget: 'budgetTotal',
       depense: 'depense',
       engagement: 'engagement'
-    });
-  }, [projects]);
+    }, orderImpact);
+  }, [projects, capexOrders]);
 };
 
 /**

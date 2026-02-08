@@ -5,76 +5,97 @@
 const STORAGE_KEYS = {
   OPEX: 'hospifinance_opex_suppliers',
   CAPEX: 'hospifinance_capex_projects',
+  OPEX_ORDERS: 'hospifinance_opex_orders',
+  CAPEX_ORDERS: 'hospifinance_capex_orders',
+  TAB_NAMES: 'hospifinance_tab_names',
+  AUTH_USERS: 'hospifinance_auth_users',
+  AUTH_SESSION: 'hospifinance_auth_session',
+  SETTINGS: 'hospifinance_settings',
   VERSION: 'hospifinance_version'
 };
 
-const CURRENT_VERSION = '1.0.0';
+const CURRENT_VERSION = '3.0.0';
 
-/**
- * Sauvegarde des données OPEX
- * @param {Array} data - Données OPEX
- */
+// ==================== Fonctions génériques ====================
+
+const saveData = (key, data) => {
+  try {
+    localStorage.setItem(key, JSON.stringify(data));
+    return true;
+  } catch (error) {
+    console.error(`Erreur sauvegarde [${key}]:`, error);
+    return false;
+  }
+};
+
+const loadData = (key) => {
+  try {
+    const data = localStorage.getItem(key);
+    return data ? JSON.parse(data) : null;
+  } catch (error) {
+    console.error(`Erreur chargement [${key}]:`, error);
+    return null;
+  }
+};
+
+// ==================== OPEX ====================
+
 export const saveOpexData = (data) => {
-  try {
-    localStorage.setItem(STORAGE_KEYS.OPEX, JSON.stringify(data));
-    localStorage.setItem(STORAGE_KEYS.VERSION, CURRENT_VERSION);
-    return true;
-  } catch (error) {
-    console.error('Erreur lors de la sauvegarde des données OPEX:', error);
-    return false;
-  }
+  saveData(STORAGE_KEYS.VERSION, CURRENT_VERSION);
+  return saveData(STORAGE_KEYS.OPEX, data);
 };
 
-/**
- * Chargement des données OPEX
- * @returns {Array} Données OPEX
- */
-export const loadOpexData = () => {
-  try {
-    const data = localStorage.getItem(STORAGE_KEYS.OPEX);
-    return data ? JSON.parse(data) : null;
-  } catch (error) {
-    console.error('Erreur lors du chargement des données OPEX:', error);
-    return null;
-  }
-};
+export const loadOpexData = () => loadData(STORAGE_KEYS.OPEX);
 
-/**
- * Sauvegarde des données CAPEX
- * @param {Array} data - Données CAPEX
- */
+// ==================== CAPEX ====================
+
 export const saveCapexData = (data) => {
+  saveData(STORAGE_KEYS.VERSION, CURRENT_VERSION);
+  return saveData(STORAGE_KEYS.CAPEX, data);
+};
+
+export const loadCapexData = () => loadData(STORAGE_KEYS.CAPEX);
+
+// ==================== Commandes OPEX ====================
+
+export const saveOpexOrders = (data) => saveData(STORAGE_KEYS.OPEX_ORDERS, data);
+export const loadOpexOrders = () => loadData(STORAGE_KEYS.OPEX_ORDERS);
+
+// ==================== Commandes CAPEX ====================
+
+export const saveCapexOrders = (data) => saveData(STORAGE_KEYS.CAPEX_ORDERS, data);
+export const loadCapexOrders = () => loadData(STORAGE_KEYS.CAPEX_ORDERS);
+
+// ==================== Noms d'onglets ====================
+
+export const saveTabNames = (data) => saveData(STORAGE_KEYS.TAB_NAMES, data);
+export const loadTabNames = () => loadData(STORAGE_KEYS.TAB_NAMES);
+
+// ==================== Authentification ====================
+
+export const saveAuthUsers = (data) => saveData(STORAGE_KEYS.AUTH_USERS, data);
+export const loadAuthUsers = () => loadData(STORAGE_KEYS.AUTH_USERS);
+export const saveAuthSession = (data) => saveData(STORAGE_KEYS.AUTH_SESSION, data);
+export const loadAuthSession = () => loadData(STORAGE_KEYS.AUTH_SESSION);
+export const clearAuthSession = () => {
   try {
-    localStorage.setItem(STORAGE_KEYS.CAPEX, JSON.stringify(data));
-    localStorage.setItem(STORAGE_KEYS.VERSION, CURRENT_VERSION);
+    localStorage.removeItem(STORAGE_KEYS.AUTH_SESSION);
     return true;
   } catch (error) {
-    console.error('Erreur lors de la sauvegarde des données CAPEX:', error);
     return false;
   }
 };
 
-/**
- * Chargement des données CAPEX
- * @returns {Array} Données CAPEX
- */
-export const loadCapexData = () => {
-  try {
-    const data = localStorage.getItem(STORAGE_KEYS.CAPEX);
-    return data ? JSON.parse(data) : null;
-  } catch (error) {
-    console.error('Erreur lors du chargement des données CAPEX:', error);
-    return null;
-  }
-};
+// ==================== Paramétrage ====================
 
-/**
- * Réinitialise toutes les données
- */
+export const saveSettings = (data) => saveData(STORAGE_KEYS.SETTINGS, data);
+export const loadSettings = () => loadData(STORAGE_KEYS.SETTINGS);
+
+// ==================== Utilitaires ====================
+
 export const clearAllData = () => {
   try {
-    localStorage.removeItem(STORAGE_KEYS.OPEX);
-    localStorage.removeItem(STORAGE_KEYS.CAPEX);
+    Object.values(STORAGE_KEYS).forEach(key => localStorage.removeItem(key));
     return true;
   } catch (error) {
     console.error('Erreur lors de la suppression des données:', error);
@@ -82,19 +103,11 @@ export const clearAllData = () => {
   }
 };
 
-/**
- * Vérifie si des données existent
- * @returns {boolean} true si des données existent
- */
 export const hasStoredData = () => {
   return localStorage.getItem(STORAGE_KEYS.OPEX) !== null ||
          localStorage.getItem(STORAGE_KEYS.CAPEX) !== null;
 };
 
-/**
- * Obtient la version stockée
- * @returns {string} Version
- */
 export const getStoredVersion = () => {
   return localStorage.getItem(STORAGE_KEYS.VERSION) || '0.0.0';
 };

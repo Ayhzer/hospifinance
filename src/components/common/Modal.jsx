@@ -1,0 +1,83 @@
+/**
+ * Composant Modal réutilisable
+ */
+
+import React, { useEffect } from 'react';
+import { X } from 'lucide-react';
+import { Button } from './Button';
+
+export const Modal = ({
+  isOpen,
+  onClose,
+  title,
+  children,
+  footer,
+  size = 'md',
+  closeOnOverlayClick = true
+}) => {
+  const sizeClasses = {
+    sm: 'max-w-md',
+    md: 'max-w-2xl',
+    lg: 'max-w-4xl',
+    xl: 'max-w-6xl'
+  };
+
+  // Gestion de l'échappement
+  useEffect(() => {
+    const handleEscape = (e) => {
+      if (e.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [isOpen, onClose]);
+
+  // Empêcher le scroll du body quand la modale est ouverte
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+      onClick={(e) => {
+        if (closeOnOverlayClick && e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      <div className={`bg-white rounded-lg shadow-xl ${sizeClasses[size]} w-full max-h-[90vh] overflow-y-auto`}>
+        <div className="p-6">
+          {/* En-tête */}
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-2xl font-bold text-gray-800">{title}</h3>
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600 transition-colors"
+              aria-label="Fermer"
+            >
+              <X size={24} />
+            </button>
+          </div>
+
+          {/* Contenu */}
+          <div className="mb-6">{children}</div>
+
+          {/* Footer */}
+          {footer && <div className="flex justify-end gap-3">{footer}</div>}
+        </div>
+      </div>
+    </div>
+  );
+};

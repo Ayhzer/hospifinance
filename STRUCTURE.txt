@@ -1,0 +1,256 @@
+═══════════════════════════════════════════════════════════════
+  HOSPIFINANCE v2.0 - STRUCTURE DU PROJET
+═══════════════════════════════════════════════════════════════
+
+📁 ARBORESCENCE COMPLÈTE
+─────────────────────────────────────────────────────────────
+
+Hospifinance/
+│
+├── 📂 src/                           Code source principal
+│   │
+│   ├── 📂 components/                14 composants React
+│   │   │
+│   │   ├── 📂 common/                Composants réutilisables (6)
+│   │   │   ├── AlertBanner.jsx       Alertes colorées (success/warning/error)
+│   │   │   ├── Button.jsx            Bouton avec variantes
+│   │   │   ├── ConfirmDialog.jsx     Dialogue de confirmation
+│   │   │   ├── Input.jsx             Input + TextArea + Select
+│   │   │   ├── Modal.jsx             Modale générique
+│   │   │   └── ProgressBar.jsx       Barre de progression colorée
+│   │   │
+│   │   ├── 📂 dashboard/             Composants dashboard (4)
+│   │   │   ├── BudgetCard.jsx        Carte résumé OPEX/CAPEX
+│   │   │   ├── BudgetCharts.jsx      Graphiques (barres + camemberts)
+│   │   │   ├── ConsolidatedBudget.jsx Budget consolidé DSI
+│   │   │   └── TabNavigation.jsx     Navigation par onglets
+│   │   │
+│   │   ├── 📂 opex/                  Composants OPEX (2)
+│   │   │   ├── OpexModal.jsx         Formulaire ajout/modif fournisseur
+│   │   │   └── OpexTable.jsx         Tableau des fournisseurs
+│   │   │
+│   │   └── 📂 capex/                 Composants CAPEX (2)
+│   │       ├── CapexModal.jsx        Formulaire ajout/modif projet
+│   │       └── CapexTable.jsx        Tableau des projets
+│   │
+│   ├── 📂 hooks/                     Hooks personnalisés (3)
+│   │   ├── useBudgetCalculations.js  Calculs mémorisés (useMemo)
+│   │   ├── useCapexData.js           Gestion état CAPEX + persistence
+│   │   └── useOpexData.js            Gestion état OPEX + persistence
+│   │
+│   ├── 📂 utils/                     Utilitaires (4)
+│   │   ├── calculations.js           Calculs budgétaires purs
+│   │   ├── exportUtils.js            Export CSV/JSON
+│   │   ├── formatters.js             Formatage devise/dates
+│   │   └── validators.js             Validation + sanitization
+│   │
+│   ├── 📂 services/                  Services (1)
+│   │   └── storageService.js         Persistence LocalStorage
+│   │
+│   ├── 📂 constants/                 Constantes (1)
+│   │   └── budgetConstants.js        Seuils, couleurs, statuts
+│   │
+│   ├── 📄 App.jsx                    Composant principal (246 lignes)
+│   ├── 📄 main.jsx                   Point d'entrée React
+│   └── 📄 index.css                  Styles globaux + Tailwind
+│
+├── 📂 _old/                          Anciens fichiers (backup)
+│   ├── App.jsx                       Version monolithique (867 lignes)
+│   ├── main.jsx                      Ancienne version
+│   └── index.css                     Anciens styles
+│
+├── 📂 public/                        Assets publics (créé à l'install)
+│
+├── 📂 node_modules/                  Dépendances (créé à l'install)
+│
+├── 📂 dist/                          Build production (créé au build)
+│
+├── 📚 DOCUMENTATION
+│   ├── 📄 LISEZ-MOI-EN-PREMIER.txt   ⭐ COMMENCEZ ICI
+│   ├── 📄 QUICK_START_v2.md          Guide démarrage rapide (5 min)
+│   ├── 📄 OPTIMISATION_COMPLETE.md   Détail des optimisations
+│   ├── 📄 DEPLOYMENT.md              Guide déploiement en ligne
+│   ├── 📄 CHANGELOG.md               Historique des versions
+│   ├── 📄 README.md                  Vue d'ensemble du projet
+│   ├── 📄 STRUCTURE.txt              Ce fichier
+│   └── 📄 QUICK_START.md             Guide v1.0 (ancien)
+│
+├── 🚀 SCRIPTS
+│   ├── 📄 START.bat                  ⭐ Lancement 1-clic (Windows)
+│   ├── 📄 INSTALL.bat                Installation auto (Windows)
+│   └── 📄 BUILD.bat                  Build production (Windows)
+│
+├── ⚙️ CONFIGURATION
+│   ├── 📄 package.json               Dépendances + scripts npm
+│   ├── 📄 vite.config.js             Configuration Vite
+│   ├── 📄 tailwind.config.js         Configuration Tailwind CSS
+│   ├── 📄 postcss.config.js          Configuration PostCSS
+│   ├── 📄 .eslintrc.cjs              Configuration ESLint
+│   └── 📄 .gitignore                 Fichiers ignorés par Git
+│
+├── 📄 index.html                     HTML principal
+└── 📄 LICENSE                        Licence MIT
+
+
+═══════════════════════════════════════════════════════════════
+📊 STATISTIQUES
+═══════════════════════════════════════════════════════════════
+
+Fichiers Source JavaScript/JSX:    25 fichiers
+  • Composants:                     14
+  • Hooks:                            3
+  • Utilitaires:                      4
+  • Services:                         1
+  • Constants:                        1
+  • App + Main:                       2
+
+Documentation:                       7 fichiers
+Scripts d'automatisation:            3 fichiers
+Fichiers de configuration:           6 fichiers
+
+Lignes de code (estimation):
+  • Total:                    ~3000+ lignes
+  • Moyenne par fichier:      ~50-150 lignes
+  • Complexité:               Faible (modulaire)
+
+
+═══════════════════════════════════════════════════════════════
+🎯 NAVIGATION RAPIDE
+═══════════════════════════════════════════════════════════════
+
+Pour modifier...
+
+Les COMPOSANTS UI:
+  → src/components/common/          Composants réutilisables
+
+Le DASHBOARD:
+  → src/components/dashboard/       Vue d'ensemble
+
+La gestion OPEX:
+  → src/components/opex/            Tableau + formulaire OPEX
+  → src/hooks/useOpexData.js        Logique métier OPEX
+
+La gestion CAPEX:
+  → src/components/capex/           Tableau + formulaire CAPEX
+  → src/hooks/useCapexData.js       Logique métier CAPEX
+
+Les CALCULS:
+  → src/utils/calculations.js       Calculs budgétaires
+  → src/hooks/useBudgetCalculations.js  Mémorisation
+
+Le FORMATAGE:
+  → src/utils/formatters.js         Devise, dates, pourcentages
+
+La VALIDATION:
+  → src/utils/validators.js         Validation de formulaires
+
+Les EXPORTS:
+  → src/utils/exportUtils.js        CSV et JSON
+
+La PERSISTENCE:
+  → src/services/storageService.js  LocalStorage
+
+Les CONSTANTES:
+  → src/constants/budgetConstants.js  Seuils, couleurs, statuts
+
+Le STYLE:
+  → src/index.css                   Styles globaux
+  → tailwind.config.js              Config Tailwind
+
+
+═══════════════════════════════════════════════════════════════
+🔄 FLUX DE DONNÉES
+═══════════════════════════════════════════════════════════════
+
+1. CHARGEMENT INITIAL
+   LocalStorage → useOpexData/useCapexData → useState → Render
+
+2. AJOUT/MODIFICATION
+   User Input → Validation → useState → LocalStorage → Re-render
+
+3. CALCULS
+   Data Changes → useMemo (hooks/useBudgetCalculations) → Display
+
+4. EXPORT
+   Button Click → exportUtils.js → Download File
+
+
+═══════════════════════════════════════════════════════════════
+🛠️ TECHNOLOGIES UTILISÉES
+═══════════════════════════════════════════════════════════════
+
+Frontend:
+  • React 18.2          Framework UI
+  • React Hooks         useState, useEffect, useMemo, useCallback
+
+Build & Dev:
+  • Vite 5.0            Build tool ultra-rapide
+  • Hot Module Reload   Rechargement instantané
+
+Styling:
+  • Tailwind CSS 3.4    Framework CSS utilitaire
+  • PostCSS 8.4         Préprocesseur CSS
+
+UI Components:
+  • Lucide React 0.263  Icônes modernes
+  • Recharts 2.10       Graphiques interactifs
+
+Quality:
+  • ESLint 8.55         Linter JavaScript
+  • React plugins       ESLint pour React
+
+
+═══════════════════════════════════════════════════════════════
+📦 TAILLE DES BUNDLES
+═══════════════════════════════════════════════════════════════
+
+Développement (non minifié):
+  • Taille totale:      ~500 KB
+  • Chargement:         ~100-200ms (local)
+
+Production (minifié + gzip):
+  • JS Bundle:          ~125 KB
+  • CSS Bundle:         ~15 KB
+  • Total:              ~140 KB
+  • Chargement:         <1s (3G), <500ms (4G)
+
+
+═══════════════════════════════════════════════════════════════
+🚀 POUR BIEN DÉMARRER
+═══════════════════════════════════════════════════════════════
+
+1. LISEZ:
+   📄 LISEZ-MOI-EN-PREMIER.txt
+
+2. INSTALLEZ:
+   Double-clic sur INSTALL.bat  OU  npm install
+
+3. LANCEZ:
+   Double-clic sur START.bat  OU  npm run dev
+
+4. TESTEZ:
+   http://localhost:5173
+
+5. DÉPLOYEZ:
+   Consultez DEPLOYMENT.md
+
+
+═══════════════════════════════════════════════════════════════
+✨ ARCHITECTURE HIGHLIGHTS
+═══════════════════════════════════════════════════════════════
+
+✅ Modulaire      Chaque fichier a une responsabilité unique
+✅ Réutilisable   Composants et hooks génériques
+✅ Maintenable    Structure claire et documentée
+✅ Performant     Mémorisation et optimisations
+✅ Testable       Logique isolée de la présentation
+✅ Évolutif       Facile d'ajouter des fonctionnalités
+✅ Documenté      Commentaires et docs complètes
+
+
+═══════════════════════════════════════════════════════════════
+
+Version 2.0 | Février 2026 | Architecture Professionnelle
+De 867 lignes monolithiques à 25+ fichiers modulaires
+
+═══════════════════════════════════════════════════════════════

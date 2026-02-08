@@ -1,0 +1,160 @@
+═══════════════════════════════════════════════════════════════
+  🚀 DÉPLOIEMENT RAPIDE GITHUB PAGES (3 ÉTAPES)
+═══════════════════════════════════════════════════════════════
+
+📋 PRÉREQUIS
+─────────────────────────────────────────────────────────────
+✓ Compte GitHub (créez-en un sur https://github.com si besoin)
+✓ Git installé (téléchargez: https://git-scm.com/download/win)
+✓ Node.js installé (déjà fait si l'app fonctionne en local)
+
+
+🎯 MÉTHODE 1: SCRIPTS AUTOMATIQUES (RECOMMANDÉ)
+─────────────────────────────────────────────────────────────
+
+ÉTAPE 1: Créer le dépôt sur GitHub
+  1. Allez sur https://github.com
+  2. Cliquez sur "+" en haut à droite > "New repository"
+  3. Repository name: hospifinance
+  4. Public
+  5. NE PAS cocher "Initialize with README"
+  6. Cliquez "Create repository"
+
+ÉTAPE 2: Modifier package.json
+  1. Ouvrez: package.json
+  2. Ligne 7, remplacez VOTRE-USERNAME par votre vrai username GitHub:
+     "homepage": "https://VOTRE-USERNAME.github.io/hospifinance",
+
+     Exemple: Si username = alex-dsi
+     "homepage": "https://alex-dsi.github.io/hospifinance",
+
+ÉTAPE 3: Initialiser et Déployer
+  1. Double-cliquez sur: INIT_GIT.bat
+     → Entrez votre username GitHub quand demandé
+     → Attendez que ça se termine
+
+  2. Installez gh-pages:
+     npm install
+
+  3. Double-cliquez sur: DEPLOY_GITHUB.bat
+     → Votre site sera en ligne!
+
+Votre site: https://VOTRE-USERNAME.github.io/hospifinance/
+
+
+🔧 MÉTHODE 2: LIGNE DE COMMANDE
+─────────────────────────────────────────────────────────────
+
+1. CRÉER LE DÉPÔT GITHUB (via le site web - voir Méthode 1, Étape 1)
+
+2. MODIFIER PACKAGE.JSON
+   Remplacez VOTRE-USERNAME par votre username GitHub
+
+3. EXÉCUTER CES COMMANDES:
+
+   cd Hospifinance
+
+   # Initialiser Git
+   git init
+   git add .
+   git commit -m "Initial commit - Hospifinance v2.0"
+   git branch -M main
+
+   # Ajouter le dépôt distant (REMPLACEZ VOTRE-USERNAME)
+   git remote add origin https://github.com/VOTRE-USERNAME/hospifinance.git
+
+   # Push vers GitHub
+   git push -u origin main
+
+   # Installer gh-pages
+   npm install
+
+   # Déployer sur GitHub Pages
+   npm run deploy
+
+4. ATTENDRE 1-2 MINUTES
+   Votre site: https://VOTRE-USERNAME.github.io/hospifinance/
+
+
+✅ VÉRIFICATION
+─────────────────────────────────────────────────────────────
+
+1. Allez sur: https://github.com/VOTRE-USERNAME/hospifinance
+2. Cliquez "Settings" > "Pages"
+3. Vérifiez que "Source" = Deploy from branch: gh-pages
+4. Vous verrez: "Your site is live at https://..."
+
+
+🔄 METTRE À JOUR LE SITE
+─────────────────────────────────────────────────────────────
+
+Chaque fois que vous modifiez le code:
+
+  git add .
+  git commit -m "Description des changements"
+  git push
+  npm run deploy
+
+
+🛠️ COMPATIBILITÉ LOCAL + GITHUB PAGES
+─────────────────────────────────────────────────────────────
+
+✓ npm run dev     → Teste en local (http://localhost:5173)
+✓ npm run deploy  → Publie en ligne (GitHub Pages)
+
+Le projet est configuré pour s'adapter automatiquement!
+
+
+⚠️ IMPORTANT
+─────────────────────────────────────────────────────────────
+
+1. Le nom du dépôt DOIT être: hospifinance
+2. Dans package.json, remplacez VOTRE-USERNAME
+3. Attendez 1-2 minutes après le premier déploiement
+4. Les données LocalStorage restent privées (navigateur)
+
+
+🆘 DÉPANNAGE
+─────────────────────────────────────────────────────────────
+
+Erreur "git: command not found"
+  → Installez Git: https://git-scm.com/download/win
+
+Erreur lors du push
+  → Vérifiez que le dépôt GitHub existe
+  → Vérifiez votre username dans la commande git remote
+
+Site 404
+  → Attendez 2-5 minutes
+  → Vérifiez Settings > Pages sur GitHub
+  → URL doit avoir le slash final: .../hospifinance/
+
+Styles cassés
+  → Vérifiez package.json homepage
+  → Vérifiez que username est correct
+
+
+📚 DOCUMENTATION COMPLÈTE
+─────────────────────────────────────────────────────────────
+
+Pour plus de détails, consultez:
+  → GITHUB_PAGES_DEPLOY.md
+
+
+🎉 SUCCÈS!
+─────────────────────────────────────────────────────────────
+
+Une fois déployé, partagez l'URL:
+  https://VOTRE-USERNAME.github.io/hospifinance/
+
+Le site est:
+  ✓ 100% gratuit
+  ✓ Accessible 24/7
+  ✓ HTTPS automatique
+  ✓ Responsive (mobile)
+  ✓ Pas de serveur requis
+
+
+═══════════════════════════════════════════════════════════════
+Version 2.0 | Compatible Local + GitHub Pages
+═══════════════════════════════════════════════════════════════

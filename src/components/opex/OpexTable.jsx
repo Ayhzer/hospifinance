@@ -58,6 +58,31 @@ export const OpexTable = ({ suppliers, totals, onEdit, onDelete, onAdd, columnVi
         </div>
       </div>
 
+      {/* Bandeau de synthèse */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-4 sm:mb-6">
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+          <div className="text-xs text-blue-600 font-medium">Budget annuel</div>
+          <div className="text-base sm:text-lg font-bold text-blue-800">{formatCurrency(totals.budget)}</div>
+        </div>
+        <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+          <div className="text-xs text-orange-600 font-medium">Dépensé</div>
+          <div className="text-base sm:text-lg font-bold text-orange-700">{formatCurrency(totals.depense)}</div>
+        </div>
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+          <div className="text-xs text-yellow-600 font-medium">Engagé</div>
+          <div className="text-base sm:text-lg font-bold text-yellow-700">{formatCurrency(totals.engagement)}</div>
+        </div>
+        <div className={`rounded-lg p-3 border ${totals.disponible < 0 ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'}`}>
+          <div className={`text-xs font-medium ${totals.disponible < 0 ? 'text-red-600' : 'text-green-600'}`}>Disponible</div>
+          <div className={`text-base sm:text-lg font-bold ${totals.disponible < 0 ? 'text-red-700' : 'text-green-700'}`}>{formatCurrency(totals.disponible)}</div>
+        </div>
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 col-span-2 sm:col-span-1">
+          <div className="text-xs text-gray-600 font-medium mb-1">Utilisation</div>
+          <div className="text-base sm:text-lg font-bold text-gray-800 mb-1">{totals.tauxUtilisation.toFixed(1)}%</div>
+          <ProgressBar value={totals.tauxUtilisation} showLabel={false} size="sm" />
+        </div>
+      </div>
+
       <div className="overflow-x-auto -mx-3 sm:mx-0">
         <div className="inline-block min-w-full align-middle">
           <div className="overflow-hidden">

@@ -334,7 +334,14 @@ const HospitalITFinanceDashboard = () => {
               />
             </div>
             <ConsolidatedBudget consolidatedTotals={consolidatedTotals} />
-            <BudgetCharts opexTotals={opexTotals} capexTotals={capexTotals} />
+            <BudgetCharts
+              opexTotals={opexTotals}
+              capexTotals={capexTotals}
+              suppliers={suppliers}
+              projects={projects}
+              opexOrders={opexOrders}
+              capexOrders={capexOrders}
+            />
           </div>
         )}
 

@@ -10,6 +10,7 @@ const STORAGE_KEYS = {
   TAB_NAMES: 'hospifinance_tab_names',
   AUTH_USERS: 'hospifinance_auth_users',
   AUTH_SESSION: 'hospifinance_auth_session',
+  AUTH_LOGS: 'hospifinance_auth_logs',
   SETTINGS: 'hospifinance_settings',
   VERSION: 'hospifinance_version'
 };
@@ -85,6 +86,22 @@ export const clearAuthSession = () => {
     return false;
   }
 };
+
+// ==================== Logs de connexion ====================
+
+const MAX_AUTH_LOGS = 200;
+
+export const saveAuthLog = (entry) => {
+  const logs = loadData(STORAGE_KEYS.AUTH_LOGS) || [];
+  logs.unshift(entry);
+  // Garder seulement les N derniers logs
+  if (logs.length > MAX_AUTH_LOGS) logs.length = MAX_AUTH_LOGS;
+  return saveData(STORAGE_KEYS.AUTH_LOGS, logs);
+};
+
+export const loadAuthLogs = () => loadData(STORAGE_KEYS.AUTH_LOGS) || [];
+
+export const clearAuthLogs = () => saveData(STORAGE_KEYS.AUTH_LOGS, []);
 
 // ==================== Paramétrage ====================
 

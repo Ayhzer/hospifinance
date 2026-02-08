@@ -9,6 +9,7 @@ const BUTTON_VARIANTS = {
   secondary: 'bg-gray-100 hover:bg-gray-200 text-gray-700',
   success: 'bg-green-600 hover:bg-green-700 text-white',
   danger: 'bg-red-600 hover:bg-red-700 text-white',
+  warning: 'bg-yellow-500 hover:bg-yellow-600 text-white',
   outline: 'border border-gray-300 text-gray-700 hover:bg-gray-50'
 };
 

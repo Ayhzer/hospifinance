@@ -3,7 +3,7 @@
  */
 
 import React, { useState } from 'react';
-import { Settings, Palette, Columns, Shield, Users, RotateCcw, Save } from 'lucide-react';
+import { Settings, Palette, Columns, Shield, Users, RotateCcw, Save, FileText, Trash2 } from 'lucide-react';
 import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
 import { useSettings } from '../../contexts/SettingsContext';
@@ -13,7 +13,8 @@ const SETTINGS_TABS = [
   { id: 'appearance', label: 'Apparence', icon: Palette },
   { id: 'columns', label: 'Colonnes', icon: Columns },
   { id: 'rules', label: 'Règles', icon: Shield },
-  { id: 'users', label: 'Utilisateurs', icon: Users }
+  { id: 'users', label: 'Utilisateurs', icon: Users },
+  { id: 'logs', label: 'Logs', icon: FileText }
 ];
 
 const COLOR_LABELS = {
@@ -50,9 +51,29 @@ const CAPEX_COLUMN_LABELS = {
   actions: 'Actions'
 };
 
+const ROLE_LABELS = {
+  superadmin: 'Superadministrateur',
+  admin: 'Administrateur',
+  user: 'Utilisateur'
+};
+
+const ROLE_BADGES = {
+  superadmin: 'bg-purple-100 text-purple-800',
+  admin: 'bg-blue-100 text-blue-800',
+  user: 'bg-gray-100 text-gray-700'
+};
+
+const LOG_TYPE_LABELS = {
+  login_success: { label: 'Connexion', color: 'text-green-600', bg: 'bg-green-50' },
+  login_failed: { label: 'Échec connexion', color: 'text-red-600', bg: 'bg-red-50' },
+  logout: { label: 'Déconnexion', color: 'text-gray-600', bg: 'bg-gray-50' },
+  account_disabled: { label: 'Compte désactivé', color: 'text-orange-600', bg: 'bg-orange-50' },
+  account_enabled: { label: 'Compte réactivé', color: 'text-blue-600', bg: 'bg-blue-50' }
+};
+
 export const SettingsPanel = () => {
   const { settings, isSettingsOpen, setIsSettingsOpen, updateColors, updateSettings, toggleOpexColumn, toggleCapexColumn, updateRules, resetSettings } = useSettings();
-  const { users, addUser, deleteUser, changePassword, isAdmin } = useAuth();
+  const { users, addUser, deleteUser, toggleUserDisabled, changePassword, isAdmin, isSuperAdmin, authLogs, clearLogs } = useAuth();
   const [activeSettingsTab, setActiveSettingsTab] = useState('appearance');
   const [newUsername, setNewUsername] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -82,6 +103,22 @@ export const SettingsPanel = () => {
     await changePassword(userId, changePasswordValue);
     setChangePasswordId(null);
     setChangePasswordValue('');
+  };
+
+  const handleDeleteUser = (userId) => {
+    const result = deleteUser(userId);
+    if (!result.success) {
+      setUserError(result.error);
+      setTimeout(() => setUserError(''), 3000);
+    }
+  };
+
+  const handleToggleDisabled = (userId) => {
+    const result = toggleUserDisabled(userId);
+    if (!result.success) {
+      setUserError(result.error);
+      setTimeout(() => setUserError(''), 3000);
+    }
   };
 
   return (
@@ -256,12 +293,15 @@ export const SettingsPanel = () => {
         {/* Gestion des utilisateurs */}
         {activeSettingsTab === 'users' && (
           <div className="space-y-4">
+            {userError && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-sm">
+                {userError}
+              </div>
+            )}
+
             {isAdmin && (
               <div className="bg-blue-50 rounded-lg p-4">
                 <h3 className="text-sm font-semibold text-gray-700 mb-3">Ajouter un utilisateur</h3>
-                {userError && (
-                  <p className="text-sm text-red-600 mb-2">{userError}</p>
-                )}
                 <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
                   <input
                     type="text"
@@ -293,47 +333,133 @@ export const SettingsPanel = () => {
             )}
 
             <div className="space-y-2">
-              {users.map(u => (
-                <div key={u.id} className="flex items-center justify-between bg-gray-50 rounded-lg p-3">
-                  <div>
-                    <p className="text-sm font-medium text-gray-800">{u.username}</p>
-                    <p className="text-xs text-gray-500">
-                      {u.role === 'admin' ? 'Administrateur' : 'Utilisateur'}
-                      {u.createdAt && ` - Créé le ${new Date(u.createdAt).toLocaleDateString('fr-FR')}`}
-                    </p>
-                  </div>
-                  {isAdmin && (
-                    <div className="flex gap-2">
-                      {changePasswordId === u.id ? (
-                        <div className="flex gap-1">
-                          <input
-                            type="password"
-                            placeholder="Nouveau MDP"
-                            value={changePasswordValue}
-                            onChange={(e) => setChangePasswordValue(e.target.value)}
-                            className="px-2 py-1 border border-gray-300 rounded text-sm w-32"
-                          />
-                          <Button variant="success" size="sm" onClick={() => handleChangePassword(u.id)}>OK</Button>
-                          <Button variant="secondary" size="sm" onClick={() => { setChangePasswordId(null); setChangePasswordValue(''); }}>X</Button>
-                        </div>
-                      ) : (
-                        <>
-                          <Button variant="secondary" size="sm" onClick={() => setChangePasswordId(u.id)}>MDP</Button>
-                          <Button
-                            variant="danger"
-                            size="sm"
-                            onClick={() => deleteUser(u.id)}
-                            disabled={u.role === 'admin' && users.filter(x => x.role === 'admin').length <= 1}
-                          >
-                            Suppr.
-                          </Button>
-                        </>
-                      )}
+              {users.map(u => {
+                const isSuperAdminUser = u.username === 'admin';
+                const canManage = isAdmin && !isSuperAdminUser || isSuperAdmin;
+                const canDelete = isSuperAdmin && !isSuperAdminUser;
+
+                return (
+                  <div
+                    key={u.id}
+                    className={`flex items-center justify-between rounded-lg p-3 ${
+                      u.disabled ? 'bg-red-50 border border-red-200' : 'bg-gray-50'
+                    }`}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className={`text-sm font-medium ${u.disabled ? 'text-gray-400 line-through' : 'text-gray-800'}`}>
+                          {u.username}
+                        </p>
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${ROLE_BADGES[u.role] || ROLE_BADGES.user}`}>
+                          {ROLE_LABELS[u.role] || 'Utilisateur'}
+                        </span>
+                        {u.disabled && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-red-100 text-red-700">
+                            Désactivé
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-500">
+                        {u.createdAt && `Créé le ${new Date(u.createdAt).toLocaleDateString('fr-FR')}`}
+                      </p>
                     </div>
-                  )}
-                </div>
-              ))}
+                    {isAdmin && (
+                      <div className="flex gap-1 flex-shrink-0 ml-2">
+                        {changePasswordId === u.id ? (
+                          <div className="flex gap-1">
+                            <input
+                              type="password"
+                              placeholder="Nouveau MDP"
+                              value={changePasswordValue}
+                              onChange={(e) => setChangePasswordValue(e.target.value)}
+                              className="px-2 py-1 border border-gray-300 rounded text-sm w-28"
+                            />
+                            <Button variant="success" size="sm" onClick={() => handleChangePassword(u.id)}>OK</Button>
+                            <Button variant="secondary" size="sm" onClick={() => { setChangePasswordId(null); setChangePasswordValue(''); }}>X</Button>
+                          </div>
+                        ) : (
+                          <>
+                            <Button variant="secondary" size="sm" onClick={() => setChangePasswordId(u.id)}>
+                              MDP
+                            </Button>
+                            {/* Bouton activer/désactiver - pas sur le superadmin */}
+                            {!isSuperAdminUser && (
+                              <Button
+                                variant={u.disabled ? 'success' : 'warning'}
+                                size="sm"
+                                onClick={() => handleToggleDisabled(u.id)}
+                              >
+                                {u.disabled ? 'Activer' : 'Désact.'}
+                              </Button>
+                            )}
+                            {/* Bouton supprimer - seulement superadmin, jamais sur lui-même */}
+                            {canDelete && (
+                              <Button
+                                variant="danger"
+                                size="sm"
+                                onClick={() => handleDeleteUser(u.id)}
+                              >
+                                Suppr.
+                              </Button>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
+          </div>
+        )}
+
+        {/* Logs de connexion */}
+        {activeSettingsTab === 'logs' && (
+          <div className="space-y-3">
+            <div className="flex justify-between items-center">
+              <h3 className="text-sm font-semibold text-gray-700">
+                Journal des connexions
+                <span className="text-xs font-normal text-gray-500 ml-1">
+                  ({authLogs.length} entrée{authLogs.length > 1 ? 's' : ''})
+                </span>
+              </h3>
+              {isAdmin && authLogs.length > 0 && (
+                <Button variant="secondary" size="sm" icon={Trash2} onClick={clearLogs}>
+                  Purger
+                </Button>
+              )}
+            </div>
+
+            {authLogs.length === 0 ? (
+              <p className="text-sm text-gray-500 italic text-center py-8">Aucun log de connexion</p>
+            ) : (
+              <div className="max-h-[350px] overflow-y-auto space-y-1">
+                {authLogs.map(log => {
+                  const typeInfo = LOG_TYPE_LABELS[log.type] || { label: log.type, color: 'text-gray-600', bg: 'bg-gray-50' };
+                  return (
+                    <div key={log.id} className={`flex items-start gap-3 rounded-lg p-2.5 ${typeInfo.bg}`}>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className={`text-xs font-semibold ${typeInfo.color}`}>
+                            {typeInfo.label}
+                          </span>
+                          <span className="text-xs font-medium text-gray-800">
+                            {log.username}
+                          </span>
+                        </div>
+                        {log.detail && (
+                          <p className="text-xs text-gray-500 mt-0.5">{log.detail}</p>
+                        )}
+                      </div>
+                      <span className="text-[10px] text-gray-400 whitespace-nowrap flex-shrink-0">
+                        {new Date(log.timestamp).toLocaleDateString('fr-FR')}{' '}
+                        {new Date(log.timestamp).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
       </div>

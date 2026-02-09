@@ -3,17 +3,20 @@
  */
 
 import React, { useState, useCallback } from 'react';
-import { Edit2, Trash2, Download, Plus } from 'lucide-react';
+import { Edit2, Trash2, Download, Plus, FileUp, FileDown } from 'lucide-react';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { calculateAvailable, calculateUsageRate } from '../../utils/calculations';
-import { exportToCSV, exportToJSON } from '../../utils/exportUtils';
+import { exportToCSV, exportToJSON, exportCapexTemplate } from '../../utils/exportUtils';
+import { importCapexFromCSV } from '../../utils/importUtils';
 import { STATUS_COLORS } from '../../constants/budgetConstants';
 import { Button } from '../common/Button';
 import { ProgressBar } from '../common/ProgressBar';
 import { ConfirmDialog } from '../common/ConfirmDialog';
+import ImportModal from '../common/ImportModal';
 
-export const CapexTable = ({ projects, totals, onEdit, onDelete, onAdd }) => {
+export const CapexTable = ({ projects, totals, onEdit, onDelete, onAdd, onImport }) => {
   const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, project: null });
+  const [importModalOpen, setImportModalOpen] = useState(false);
 
   const handleDeleteClick = useCallback((project) => {
     setDeleteConfirm({ isOpen: true, project });
@@ -26,6 +29,18 @@ export const CapexTable = ({ projects, totals, onEdit, onDelete, onAdd }) => {
     setDeleteConfirm({ isOpen: false, project: null });
   }, [deleteConfirm, onDelete]);
 
+  const handleImport = useCallback(async (file) => {
+    const result = await importCapexFromCSV(file, projects);
+
+    if (result.success && result.data) {
+      result.data.forEach(project => {
+        onImport(project);
+      });
+    }
+
+    return result;
+  }, [projects, onImport]);
+
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
       <div className="flex justify-between items-center mb-6">
@@ -33,19 +48,35 @@ export const CapexTable = ({ projects, totals, onEdit, onDelete, onAdd }) => {
         <div className="flex gap-3">
           <Button
             variant="secondary"
-            icon={Download}
+            icon={<FileDown size={16} />}
+            onClick={exportCapexTemplate}
+            title="Télécharger un modèle CSV vierge"
+          >
+            Modèle
+          </Button>
+          <Button
+            variant="secondary"
+            icon={<FileUp size={16} />}
+            onClick={() => setImportModalOpen(true)}
+            title="Importer des projets depuis CSV"
+          >
+            Importer
+          </Button>
+          <Button
+            variant="secondary"
+            icon={<Download size={16} />}
             onClick={() => exportToCSV(projects, 'capex_projets')}
           >
             CSV
           </Button>
           <Button
             variant="secondary"
-            icon={Download}
+            icon={<Download size={16} />}
             onClick={() => exportToJSON(projects, 'capex_projets')}
           >
             JSON
           </Button>
-          <Button variant="success" icon={Plus} onClick={onAdd}>
+          <Button variant="success" icon={<Plus size={16} />} onClick={onAdd}>
             Nouveau projet
           </Button>
         </div>
@@ -219,6 +250,14 @@ export const CapexTable = ({ projects, totals, onEdit, onDelete, onAdd }) => {
         message={`Êtes-vous sûr de vouloir supprimer le projet "${deleteConfirm.project?.project}" ? Cette action est irréversible.`}
         confirmText="Supprimer"
         variant="danger"
+      />
+
+      <ImportModal
+        isOpen={importModalOpen}
+        onClose={() => setImportModalOpen(false)}
+        onImport={handleImport}
+        title="Importer des Projets CAPEX"
+        type="capex"
       />
     </div>
   );

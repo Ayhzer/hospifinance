@@ -3,17 +3,20 @@
  */
 
 import React, { useState, useCallback } from 'react';
-import { Edit2, Trash2, Download, Plus } from 'lucide-react';
+import { Edit2, Trash2, Download, Plus, FileUp, FileDown } from 'lucide-react';
 import { formatCurrency } from '../../utils/formatters';
 import { calculateAvailable, calculateUsageRate } from '../../utils/calculations';
-import { exportToCSV, exportToJSON } from '../../utils/exportUtils';
+import { exportToCSV, exportToJSON, exportOpexTemplate } from '../../utils/exportUtils';
+import { importOpexFromCSV } from '../../utils/importUtils';
 import { Button } from '../common/Button';
 import { ProgressBar } from '../common/ProgressBar';
 import { ConfirmDialog } from '../common/ConfirmDialog';
+import ImportModal from '../common/ImportModal';
 
-export const OpexTable = ({ suppliers, totals, onEdit, onDelete, onAdd, columnVisibility = {} }) => {
+export const OpexTable = ({ suppliers, totals, onEdit, onDelete, onAdd, onImport, columnVisibility = {} }) => {
   const col = (key) => columnVisibility[key] !== false;
   const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, supplier: null });
+  const [importModalOpen, setImportModalOpen] = useState(false);
 
   const handleDeleteClick = useCallback((supplier) => {
     setDeleteConfirm({ isOpen: true, supplier });
@@ -26,6 +29,19 @@ export const OpexTable = ({ suppliers, totals, onEdit, onDelete, onAdd, columnVi
     setDeleteConfirm({ isOpen: false, supplier: null });
   }, [deleteConfirm, onDelete]);
 
+  const handleImport = useCallback(async (file) => {
+    const result = await importOpexFromCSV(file, suppliers);
+
+    if (result.success && result.data) {
+      // Ajouter les données importées via le callback parent
+      result.data.forEach(supplier => {
+        onImport(supplier);
+      });
+    }
+
+    return result;
+  }, [suppliers, onImport]);
+
   return (
     <div className="bg-white rounded-lg shadow-md p-3 sm:p-4 md:p-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-3">
@@ -33,7 +49,29 @@ export const OpexTable = ({ suppliers, totals, onEdit, onDelete, onAdd, columnVi
         <div className="flex flex-wrap gap-2 sm:gap-3 w-full sm:w-auto">
           <Button
             variant="secondary"
-            icon={Download}
+            icon={<FileDown size={16} />}
+            size="sm"
+            onClick={exportOpexTemplate}
+            className="flex-1 sm:flex-none"
+            title="Télécharger un modèle CSV vierge"
+          >
+            <span className="hidden sm:inline">Modèle</span>
+            <span className="sm:hidden">📄</span>
+          </Button>
+          <Button
+            variant="secondary"
+            icon={<FileUp size={16} />}
+            size="sm"
+            onClick={() => setImportModalOpen(true)}
+            className="flex-1 sm:flex-none"
+            title="Importer des fournisseurs depuis CSV"
+          >
+            <span className="hidden sm:inline">Importer</span>
+            <span className="sm:hidden">📥</span>
+          </Button>
+          <Button
+            variant="secondary"
+            icon={<Download size={16} />}
             size="sm"
             onClick={() => exportToCSV(suppliers, 'opex_fournisseurs')}
             className="flex-1 sm:flex-none"
@@ -43,7 +81,7 @@ export const OpexTable = ({ suppliers, totals, onEdit, onDelete, onAdd, columnVi
           </Button>
           <Button
             variant="secondary"
-            icon={Download}
+            icon={<Download size={16} />}
             size="sm"
             onClick={() => exportToJSON(suppliers, 'opex_fournisseurs')}
             className="flex-1 sm:flex-none"
@@ -51,7 +89,7 @@ export const OpexTable = ({ suppliers, totals, onEdit, onDelete, onAdd, columnVi
             <span className="hidden sm:inline">JSON</span>
             <span className="sm:hidden">JSON</span>
           </Button>
-          <Button variant="primary" icon={Plus} size="sm" onClick={onAdd} className="w-full sm:w-auto">
+          <Button variant="primary" icon={<Plus size={16} />} size="sm" onClick={onAdd} className="w-full sm:w-auto">
             <span className="hidden sm:inline">Nouveau fournisseur</span>
             <span className="sm:hidden">Nouveau</span>
           </Button>
@@ -226,6 +264,14 @@ export const OpexTable = ({ suppliers, totals, onEdit, onDelete, onAdd, columnVi
         message={`Êtes-vous sûr de vouloir supprimer le fournisseur "${deleteConfirm.supplier?.supplier}" ? Cette action est irréversible.`}
         confirmText="Supprimer"
         variant="danger"
+      />
+
+      <ImportModal
+        isOpen={importModalOpen}
+        onClose={() => setImportModalOpen(false)}
+        onImport={handleImport}
+        title="Importer des Fournisseurs OPEX"
+        type="opex"
       />
     </div>
   );

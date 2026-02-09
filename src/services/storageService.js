@@ -12,10 +12,11 @@ const STORAGE_KEYS = {
   AUTH_SESSION: 'hospifinance_auth_session',
   AUTH_LOGS: 'hospifinance_auth_logs',
   SETTINGS: 'hospifinance_settings',
-  VERSION: 'hospifinance_version'
+  VERSION: 'hospifinance_version',
+  INITIALIZED: 'hospifinance_initialized' // Flag pour éviter écrasement données
 };
 
-const CURRENT_VERSION = '3.0.0';
+const CURRENT_VERSION = '3.1.0';
 
 // ==================== Fonctions génériques ====================
 
@@ -127,4 +128,37 @@ export const hasStoredData = () => {
 
 export const getStoredVersion = () => {
   return localStorage.getItem(STORAGE_KEYS.VERSION) || '0.0.0';
+};
+
+// ==================== Protection des données de production ====================
+
+/**
+ * Vérifie si l'application a déjà été initialisée avec des données
+ * Retourne true si des données utilisateur existent (pas de données par défaut)
+ */
+export const isInitialized = () => {
+  return localStorage.getItem(STORAGE_KEYS.INITIALIZED) === 'true';
+};
+
+/**
+ * Marque l'application comme initialisée
+ * Appeler après le premier chargement des données par défaut
+ */
+export const markAsInitialized = () => {
+  saveData(STORAGE_KEYS.INITIALIZED, 'true');
+  saveData(STORAGE_KEYS.VERSION, CURRENT_VERSION);
+};
+
+/**
+ * Vérifie si des données OPEX existent (production ou défaut)
+ */
+export const hasOpexData = () => {
+  return localStorage.getItem(STORAGE_KEYS.OPEX) !== null;
+};
+
+/**
+ * Vérifie si des données CAPEX existent (production ou défaut)
+ */
+export const hasCapexData = () => {
+  return localStorage.getItem(STORAGE_KEYS.CAPEX) !== null;
 };

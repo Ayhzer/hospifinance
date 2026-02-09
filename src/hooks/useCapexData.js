@@ -3,7 +3,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { saveCapexData, loadCapexData } from '../services/storageService';
+import { saveCapexData, loadCapexData, hasCapexData, markAsInitialized } from '../services/storageService';
 import { validateCapexData, parseNumber, sanitizeString } from '../utils/validators';
 
 // Données par défaut
@@ -51,14 +51,29 @@ export const useCapexData = () => {
   // Chargement initial des données
   useEffect(() => {
     const storedData = loadCapexData();
-    setProjects(storedData || DEFAULT_CAPEX_DATA);
+
+    // Si des données existent, les charger (données de production)
+    if (storedData && storedData.length > 0) {
+      setProjects(storedData);
+    }
+    // Sinon, charger les données par défaut UNIQUEMENT si aucune donnée n'existe
+    else if (!hasCapexData()) {
+      setProjects(DEFAULT_CAPEX_DATA);
+      saveCapexData(DEFAULT_CAPEX_DATA);
+      markAsInitialized(); // Marquer comme initialisé
+    }
+    // Cas où les données existent mais sont vides (tableau vide)
+    else {
+      setProjects([]); // Respecter le choix de l'utilisateur d'avoir supprimé toutes les données
+    }
+
     setLoading(false);
   }, []);
 
   // Sauvegarde automatique à chaque modification
   useEffect(() => {
-    if (!loading && projects.length > 0) {
-      saveCapexData(projects);
+    if (!loading) {
+      saveCapexData(projects); // Sauvegarder même si tableau vide (choix utilisateur)
     }
   }, [projects, loading]);
 

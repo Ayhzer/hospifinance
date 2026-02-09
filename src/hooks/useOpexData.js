@@ -3,7 +3,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { saveOpexData, loadOpexData } from '../services/storageService';
+import { saveOpexData, loadOpexData, hasOpexData, markAsInitialized } from '../services/storageService';
 import { validateOpexData, parseNumber, sanitizeString } from '../utils/validators';
 
 // Données par défaut
@@ -45,14 +45,29 @@ export const useOpexData = () => {
   // Chargement initial des données
   useEffect(() => {
     const storedData = loadOpexData();
-    setSuppliers(storedData || DEFAULT_OPEX_DATA);
+
+    // Si des données existent, les charger (données de production)
+    if (storedData && storedData.length > 0) {
+      setSuppliers(storedData);
+    }
+    // Sinon, charger les données par défaut UNIQUEMENT si aucune donnée n'existe
+    else if (!hasOpexData()) {
+      setSuppliers(DEFAULT_OPEX_DATA);
+      saveOpexData(DEFAULT_OPEX_DATA);
+      markAsInitialized(); // Marquer comme initialisé
+    }
+    // Cas où les données existent mais sont vides (tableau vide)
+    else {
+      setSuppliers([]); // Respecter le choix de l'utilisateur d'avoir supprimé toutes les données
+    }
+
     setLoading(false);
   }, []);
 
   // Sauvegarde automatique à chaque modification
   useEffect(() => {
-    if (!loading && suppliers.length > 0) {
-      saveOpexData(suppliers);
+    if (!loading) {
+      saveOpexData(suppliers); // Sauvegarder même si tableau vide (choix utilisateur)
     }
   }, [suppliers, loading]);
 

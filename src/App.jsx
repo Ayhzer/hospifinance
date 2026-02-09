@@ -136,6 +136,13 @@ const HospitalITFinanceDashboard = () => {
     [deleteSupplier]
   );
 
+  const handleImportOpex = useCallback(
+    (supplierData) => {
+      addSupplier(supplierData);
+    },
+    [addSupplier]
+  );
+
   // Handlers CAPEX
   const handleAddCapex = useCallback(() => {
     setEditingCapex(null);
@@ -164,6 +171,13 @@ const HospitalITFinanceDashboard = () => {
   const handleDeleteCapex = useCallback(
     (id) => { deleteProject(id); },
     [deleteProject]
+  );
+
+  const handleImportCapex = useCallback(
+    (projectData) => {
+      addProject(projectData);
+    },
+    [addProject]
   );
 
   // Handlers Commandes OPEX
@@ -353,6 +367,7 @@ const HospitalITFinanceDashboard = () => {
             onEdit={handleEditOpex}
             onDelete={handleDeleteOpex}
             onAdd={handleAddOpex}
+            onImport={handleImportOpex}
             columnVisibility={settings.opexColumns}
           />
         )}
@@ -365,6 +380,7 @@ const HospitalITFinanceDashboard = () => {
             onEdit={handleEditCapex}
             onDelete={handleDeleteCapex}
             onAdd={handleAddCapex}
+            onImport={handleImportCapex}
             columnVisibility={settings.capexColumns}
           />
         )}

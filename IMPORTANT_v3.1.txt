@@ -1,0 +1,131 @@
+═══════════════════════════════════════════════════════════════
+  📢 IMPORTANT - MISE À JOUR v3.1.0
+═══════════════════════════════════════════════════════════════
+
+🛡️ VOS DONNÉES SONT MAINTENANT PROTÉGÉES
+
+À partir de cette version, vos données de production ne seront PLUS
+écrasées lors des mises à jour de l'application.
+
+═══════════════════════════════════════════════════════════════
+📊 CE QUI CHANGE POUR VOUS
+═══════════════════════════════════════════════════════════════
+
+✅ Protection Automatique
+   → Vos fournisseurs, projets et commandes sont préservés
+   → Les données d'exemple ne s'affichent que la première fois
+   → Vous pouvez mettre à jour sans crainte de perte de données
+
+✅ Respect de Vos Choix
+   → Si vous supprimez toutes vos données, elles restent supprimées
+   → Pas de rechargement automatique des exemples
+   → Vous gardez le contrôle total
+
+✅ Backup Recommandé
+   → Exportez régulièrement vos données en CSV/JSON
+   → Utilisez les boutons d'export dans chaque onglet
+   → Conservez une copie sur votre disque ou cloud
+
+
+═══════════════════════════════════════════════════════════════
+🔄 SI VOUS METTEZ À JOUR DEPUIS v3.0 ou v2.0
+═══════════════════════════════════════════════════════════════
+
+➡️ Aucune action requise !
+
+Vos données actuelles seront automatiquement détectées et préservées.
+
+Première ouverture après mise à jour :
+  1. L'application charge vos données existantes
+  2. Un flag de protection est activé
+  3. Vous pouvez continuer à travailler normalement
+
+
+═══════════════════════════════════════════════════════════════
+🆕 SI C'EST VOTRE PREMIÈRE INSTALLATION
+═══════════════════════════════════════════════════════════════
+
+➡️ Vous verrez des données d'exemple
+
+L'application charge automatiquement :
+  • 3 fournisseurs OPEX (Oracle, Microsoft, Dell)
+  • 3 projets CAPEX (Datacenter, VDI, Cybersécurité)
+
+Ces exemples vous permettent de comprendre le fonctionnement.
+
+Pour commencer avec vos vraies données :
+  1. Supprimez les exemples (bouton 🗑️)
+  2. Ajoutez vos fournisseurs/projets
+  3. Vos données seront automatiquement sauvegardées
+
+
+═══════════════════════════════════════════════════════════════
+🔧 FONCTIONS UTILES
+═══════════════════════════════════════════════════════════════
+
+📥 Export de Sauvegarde
+   → Onglet OPEX → Bouton "CSV" ou "JSON"
+   → Onglet CAPEX → Bouton "CSV" ou "JSON"
+   → Fichiers nommés avec la date (ex: opex_2026-02-09.csv)
+
+🔄 Réinitialiser aux Exemples
+   Si vous souhaitez revenir aux données d'exemple :
+
+   Méthode 1 - Via DevTools (F12)
+     1. Ouvrir DevTools (F12)
+     2. Console → Taper : localStorage.clear()
+     3. Rafraîchir la page (F5)
+
+   Méthode 2 - Fonction (future)
+     Un bouton "Réinitialiser aux exemples" sera ajouté
+
+
+═══════════════════════════════════════════════════════════════
+❓ QUESTIONS FRÉQUENTES
+═══════════════════════════════════════════════════════════════
+
+Q: Mes données vont-elles être perdues lors de la mise à jour ?
+R: NON, elles sont automatiquement protégées depuis v3.1
+
+Q: Puis-je supprimer toutes mes données sans que les exemples reviennent ?
+R: OUI, votre choix est respecté
+
+Q: Comment faire un backup de mes données ?
+R: Utilisez les boutons CSV ou JSON dans chaque onglet
+
+Q: Les données sont-elles synchronisées entre ordinateurs ?
+R: NON, elles sont stockées localement sur chaque navigateur
+
+Q: Comment transférer mes données sur un autre ordinateur ?
+R: Exportez en JSON, copiez le fichier, et importez-le
+   (fonction d'import prévue en v4.0)
+
+
+═══════════════════════════════════════════════════════════════
+📚 DOCUMENTATION COMPLÈTE
+═══════════════════════════════════════════════════════════════
+
+Pour en savoir plus, consultez :
+
+• README.md              Vue d'ensemble du projet
+• CHANGELOG.md           Nouveautés de la version 3.1
+• MIGRATION.md           Guide détaillé de migration
+• DATA_PROTECTION.md     Documentation technique (développeurs)
+• QUICK_START_v3.md      Guide de démarrage rapide
+
+
+═══════════════════════════════════════════════════════════════
+✉️ CONTACT & SUPPORT
+═══════════════════════════════════════════════════════════════
+
+Problème ou question ?
+→ Consultez la documentation dans le dossier du projet
+→ Ouvrez une issue sur GitHub (si configuré)
+
+
+═══════════════════════════════════════════════════════════════
+
+Version 3.1.0 | Février 2026
+Hospifinance - Tableau de Bord Financier DSI Hospitalière
+
+═══════════════════════════════════════════════════════════════

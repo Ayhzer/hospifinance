@@ -2,6 +2,213 @@
 
 Toutes les modifications notables de ce projet sont documentées dans ce fichier.
 
+Le format est basé sur [Keep a Changelog](https://keepachangelog.com/fr/1.0.0/),
+et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
+
+---
+
+## [3.1.0] - 2026-02-09 - Pilotage Budgétaire Renforcé 📊
+
+### 🔧 Améliorations
+
+#### Performance & Stabilité
+- ⚡ **Optimisation des calculs** - Réduction des re-renders inutiles
+- 🐛 **Corrections mineures** - Stabilité accrue sur les formulaires
+- 💾 **Persistence améliorée** - Gestion d'erreurs LocalStorage
+
+#### Interface Utilisateur
+- 🎨 **Synthèse OPEX/CAPEX** - Vue consolidée plus claire
+- 📊 **Graphiques optimisés** - Animations plus fluides
+- 🔔 **Alertes améliorées** - Messages plus explicites
+
+#### Authentification
+- 🔐 **Sécurité renforcée** - Validation des sessions améliorée
+- 📝 **Logs détaillés** - Meilleure traçabilité des actions
+- 👤 **UX login** - Messages d'erreur plus clairs
+
+#### Protection des Données
+- 🛡️ **Protection anti-écrasement** - Les données de production ne sont plus écrasées lors des mises à jour
+- 🔍 **Détection intelligente** - Système de détection des données existantes
+- ✅ **Flag d'initialisation** - `hospifinance_initialized` pour éviter les réinitialisations accidentelles
+- 📝 **Guide de migration** - Documentation complète dans MIGRATION.md
+
+### 📚 Documentation
+- 📖 **Mise à jour complète** - Documentation technique exhaustive
+- 📋 **Guide d'architecture** - Diagrammes et explications détaillées
+- 🚀 **Guides utilisateur** - Scénarios d'usage documentés
+- 🔄 **Guide de migration** - MIGRATION.md créé avec tous les scénarios
+
+---
+
+## [3.0.0] - 2026-02-08 - Solution Professionnelle Complète 🚀
+
+### 🎉 Nouveautés Majeures
+
+#### 🔐 Système d'Authentification
+- ✨ **Gestion multi-utilisateurs** - 3 niveaux de rôles
+  - **superadmin**: Accès total (compte admin par défaut)
+  - **admin**: Gestion utilisateurs + données budgétaires
+  - **user**: Consultation uniquement
+- 🔒 **Hashage sécurisé** - SHA-256 via Web Crypto API
+- 👥 **CRUD utilisateurs** - Création, suppression, activation/désactivation
+- 🔑 **Gestion des mots de passe** - Changement par administrateurs
+- 📜 **Journal d'audit** - Logs complets (connexions, modifications comptes)
+- 💾 **Session persistante** - Auto-reconnexion au rechargement
+
+**Composants créés:**
+- `LoginPage.jsx` - Interface de connexion
+- `AuthContext.jsx` - Contexte d'authentification
+- `authUtils.js` - Utilitaires crypto
+
+#### 📦 Système de Gestion des Commandes
+- ✨ **Cycle de vie complet** - 6 statuts de commande
+  - En attente → Commandée → Livrée → Facturée → Payée → Annulée
+- 💰 **Impact budgétaire automatique**
+  - **Commandée/Livrée**: Comptabilisées en Engagement
+  - **Facturée/Payée**: Basculées en Dépense
+  - **En attente/Annulée**: Aucun impact
+- 📊 **Tables dédiées** - OPEX Orders et CAPEX Orders
+- 🔗 **Liaison parent** - Association fournisseur/projet
+- 📝 **Informations détaillées**
+  - Description, montant, statut
+  - Dates commande et facture
+  - Référence BC/Facture
+  - Notes complémentaires
+
+**Composants créés:**
+- `OrderTable.jsx` - Tableau générique des commandes
+- `OrderModal.jsx` - Formulaire d'ajout/édition
+- `orderConstants.js` - Constantes statuts et couleurs
+- `orderCalculations.js` - Calculs d'impact budgétaire
+- `useOrderData.js` - Hook de gestion état
+
+#### ⚙️ Panneau de Paramétrage
+- ✨ **Personnalisation complète** - 5 onglets de configuration
+
+**Onglet Apparence:**
+- 📝 Nom de l'application personnalisable
+- 🎨 6 couleurs de thème configurables
+  - Primary, Success, Warning, Danger, Info, Accent
+- 🔄 Aperçu en temps réel des changements
+
+**Onglet Colonnes:**
+- 👁️ Visibilité colonnes OPEX (8 colonnes)
+- 👁️ Visibilité colonnes CAPEX (9 colonnes)
+- 💾 Sauvegarde automatique des préférences
+
+**Onglet Règles:**
+- ⚠️ Seuil d'avertissement (défaut: 75%)
+- 🚨 Seuil critique (défaut: 90%)
+- 🎯 Application immédiate aux barres de progression
+
+**Onglet Utilisateurs (Admin uniquement):**
+- 👥 Liste des utilisateurs avec rôles
+- ➕ Création de nouveaux comptes
+- 🗑️ Suppression de comptes
+- 🔄 Activation/Désactivation
+- 🔑 Changement de mots de passe
+
+**Onglet Logs (Admin uniquement):**
+- 📜 Journal d'audit complet
+- 🔍 Détails: utilisateur, action, timestamp, IP
+- 🗑️ Fonction de purge des logs
+
+**Composants créés:**
+- `SettingsPanel.jsx` - Panneau multi-onglets
+- `SettingsContext.jsx` - Contexte de paramètres
+- `useSettingsShortcut.js` - Raccourcis clavier
+
+#### 🎹 Raccourcis Clavier
+- ⌨️ **Ctrl+Shift+P** - Ouvrir les paramètres
+- 🖱️ **Triple-clic sur titre** - Ouvrir les paramètres (alternatif)
+
+### 🔧 Améliorations Techniques
+
+#### Gestion de l'État
+- 🏗️ **2 nouveaux contextes** - Auth et Settings
+- 🔄 **Hooks optimisés** - useOrderData pour commandes
+- 💾 **LocalStorage étendu** - 8 clés de stockage
+  - `hospifinance_opex_suppliers`
+  - `hospifinance_capex_projects`
+  - `hospifinance_opex_orders` (nouveau)
+  - `hospifinance_capex_orders` (nouveau)
+  - `hospifinance_auth_users` (nouveau)
+  - `hospifinance_auth_session` (nouveau)
+  - `hospifinance_auth_logs` (nouveau)
+  - `hospifinance_settings` (nouveau)
+
+#### Services & Utilitaires
+- 🔐 **authUtils.js** - Hashage SHA-256 asynchrone
+- 📊 **orderCalculations.js** - 3 fonctions de calcul d'impact
+- 🔧 **storageService.js étendu** - 12 nouvelles fonctions
+
+#### Validation
+- ✅ **validateOrderData()** - Validation commandes
+- 🧹 **sanitizeString()** - Nettoyage des entrées
+
+### 🎨 Améliorations Interface
+
+#### Navigation
+- 📑 **5 onglets** au lieu de 3
+  - Vue d'ensemble (inchangé)
+  - OPEX (inchangé)
+  - CAPEX (inchangé)
+  - **Commandes OPEX** (nouveau)
+  - **Commandes CAPEX** (nouveau)
+
+#### Composants UI
+- 🚪 **Page de connexion** - Design moderne et sécurisé
+- ⚙️ **Panneau paramètres** - Modal plein écran avec onglets
+- 📋 **Tables commandes** - Avec filtres et actions
+
+#### Indicateurs Visuels
+- 🎨 **Badges de statut** - Colorés selon l'état commande
+- 📊 **Impact en temps réel** - Recalcul automatique
+- 🔔 **Alertes contextuelles** - Messages de confirmation/erreur
+
+### 🐛 Corrections de Bugs
+
+#### Authentification
+- ✅ **Fix session** - Restauration correcte au reload
+- ✅ **Fix permissions** - Vérification rôles avant actions
+- ✅ **Fix logs** - Limitation à 200 entrées max
+
+#### Commandes
+- ✅ **Fix calculs** - Impact correct selon statut
+- ✅ **Fix agrégation** - Totaux par fournisseur/projet
+- ✅ **Fix dates** - Validation dates commande/facture
+
+#### Paramètres
+- ✅ **Fix couleurs** - Application CSS custom properties
+- ✅ **Fix colonnes** - Persistance préférences
+- ✅ **Fix seuils** - Validation 0-100%
+
+### 📚 Documentation
+
+#### Nouveaux Fichiers
+- `AUTHENTICATION.md` - Guide complet authentification
+- `ORDERS.md` - Guide système de commandes
+- `SETTINGS.md` - Guide paramétrage
+- `ARCHITECTURE.md` - Architecture technique détaillée
+
+#### Mises à Jour
+- `README.md` - Fonctionnalités v3.0 documentées
+- `CHANGELOG.md` - Ce fichier mis à jour
+- `STRUCTURE.txt` - Nouvelle arborescence
+
+### 📊 Statistiques v3.0
+
+- **Fichiers ajoutés**: 11 nouveaux fichiers
+- **Composants**: +5 (total: 19)
+- **Hooks**: +2 (total: 5)
+- **Contextes**: +2 (total: 2)
+- **Utilitaires**: +2 (total: 6)
+- **Constantes**: +1 (total: 2)
+- **Lignes de code**: ~5000+ (vs ~3000 en v2.0)
+- **Fonctionnalités**: +3 modules majeurs
+
+---
+
 ## [2.0.0] - 2026-02-08 - Refonte Majeure ⚡
 
 ### 🎉 Nouveautés Majeures

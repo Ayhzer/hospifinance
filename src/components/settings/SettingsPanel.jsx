@@ -466,10 +466,10 @@ export const SettingsPanel = () => {
 
       {/* Footer */}
       <div className="flex justify-between items-center mt-6 pt-4 border-t border-gray-200">
-        <Button variant="secondary" icon={RotateCcw} size="sm" onClick={resetSettings}>
+        <Button variant="secondary" icon={<RotateCcw size={16} />} size="sm" onClick={resetSettings}>
           Réinitialiser
         </Button>
-        <Button variant="primary" icon={Save} size="sm" onClick={() => setIsSettingsOpen(false)}>
+        <Button variant="primary" icon={<Save size={16} />} size="sm" onClick={() => setIsSettingsOpen(false)}>
           Fermer
         </Button>
       </div>

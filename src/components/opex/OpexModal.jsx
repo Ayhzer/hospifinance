@@ -49,7 +49,7 @@ export const OpexModal = ({ isOpen, onClose, onSave, editingSupplier }) => {
           <Button variant="outline" onClick={onClose}>
             Annuler
           </Button>
-          <Button variant="primary" icon={Save} onClick={handleSubmit}>
+          <Button variant="primary" icon={<Save size={16} />} onClick={handleSubmit}>
             Enregistrer
           </Button>
         </>

@@ -24,7 +24,7 @@ export const Button = ({
   onClick,
   variant = 'primary',
   size = 'md',
-  icon: Icon,
+  icon,
   disabled = false,
   className = '',
   type = 'button',
@@ -46,7 +46,7 @@ export const Button = ({
       `}
       {...props}
     >
-      {Icon && <Icon size={18} />}
+      {icon}
       {children}
     </button>
   );

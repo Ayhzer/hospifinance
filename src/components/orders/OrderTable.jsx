@@ -47,13 +47,13 @@ export const OrderTable = ({ orders, parentItems, parentLabel, parentNameKey, ty
           Commandes {type === 'opex' ? 'OPEX' : 'CAPEX'}
         </h2>
         <div className="flex flex-wrap gap-2 sm:gap-3 w-full sm:w-auto">
-          <Button variant="secondary" icon={Download} size="sm" onClick={() => exportToCSV(exportData, `commandes_${type}`)} className="flex-1 sm:flex-none">
+          <Button variant="secondary" icon={<Download size={16} />} size="sm" onClick={() => exportToCSV(exportData, `commandes_${type}`)} className="flex-1 sm:flex-none">
             CSV
           </Button>
-          <Button variant="secondary" icon={Download} size="sm" onClick={() => exportToJSON(exportData, `commandes_${type}`)} className="flex-1 sm:flex-none">
+          <Button variant="secondary" icon={<Download size={16} />} size="sm" onClick={() => exportToJSON(exportData, `commandes_${type}`)} className="flex-1 sm:flex-none">
             JSON
           </Button>
-          <Button variant="primary" icon={Plus} size="sm" onClick={onAdd} className="w-full sm:w-auto">
+          <Button variant="primary" icon={<Plus size={16} />} size="sm" onClick={onAdd} className="w-full sm:w-auto">
             <span className="hidden sm:inline">Nouvelle commande</span>
             <span className="sm:hidden">Nouveau</span>
           </Button>

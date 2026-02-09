@@ -56,7 +56,7 @@ export const CapexModal = ({ isOpen, onClose, onSave, editingProject }) => {
           <Button variant="outline" onClick={onClose}>
             Annuler
           </Button>
-          <Button variant="success" icon={Save} onClick={handleSubmit}>
+          <Button variant="success" icon={<Save size={16} />} onClick={handleSubmit}>
             Enregistrer
           </Button>
         </>

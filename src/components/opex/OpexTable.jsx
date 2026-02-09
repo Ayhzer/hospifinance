@@ -14,7 +14,7 @@ import { ConfirmDialog } from '../common/ConfirmDialog';
 import ImportModal from '../common/ImportModal';
 
 export const OpexTable = ({ suppliers, totals, onEdit, onDelete, onAdd, onImport, columnVisibility = {} }) => {
-  const col = (key) => columnVisibility[key] !== false;
+  const col = (key) => (columnVisibility || {})[key] !== false;
   const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, supplier: null });
   const [importModalOpen, setImportModalOpen] = useState(false);
 

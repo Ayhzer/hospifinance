@@ -424,7 +424,7 @@ export const SettingsPanel = () => {
                 </span>
               </h3>
               {isAdmin && authLogs.length > 0 && (
-                <Button variant="secondary" size="sm" icon={Trash2} onClick={clearLogs}>
+                <Button variant="secondary" size="sm" icon={<Trash2 size={16} />} onClick={clearLogs}>
                   Purger
                 </Button>
               )}

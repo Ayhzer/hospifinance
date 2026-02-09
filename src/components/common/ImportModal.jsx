@@ -4,9 +4,9 @@
 
 import { useState, useRef } from 'react';
 import { FileUp, AlertCircle, CheckCircle, X } from 'lucide-react';
-import Modal from './Modal';
-import Button from './Button';
-import AlertBanner from './AlertBanner';
+import { Modal } from './Modal';
+import { Button } from './Button';
+import { AlertBanner } from './AlertBanner';
 
 export default function ImportModal({ isOpen, onClose, onImport, title, type }) {
   const [file, setFile] = useState(null);

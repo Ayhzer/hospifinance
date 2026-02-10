@@ -8,6 +8,7 @@ import { DollarSign, Server, LogOut, Settings } from 'lucide-react';
 
 // Contextes
 import { useAuth } from './contexts/AuthContext';
+import { usePermissions } from './contexts/PermissionsContext';
 import { useSettings } from './contexts/SettingsContext';
 
 // Hooks
@@ -23,6 +24,7 @@ import {
 
 // Composants
 import { LoginPage } from './components/auth/LoginPage';
+import { ChangePasswordButton } from './components/auth/ChangePasswordButton';
 import { SettingsPanel } from './components/settings/SettingsPanel';
 import { TabNavigation } from './components/dashboard/TabNavigation';
 import { BudgetCard } from './components/dashboard/BudgetCard';
@@ -38,6 +40,7 @@ import { AlertBanner } from './components/common/AlertBanner';
 
 const HospitalITFinanceDashboard = () => {
   const { user, logout, loading: authLoading } = useAuth();
+  const permissions = usePermissions();
   const { settings, setIsSettingsOpen } = useSettings();
   const { handleTitleClick } = useSettingsShortcut();
 
@@ -290,13 +293,21 @@ const HospitalITFinanceDashboard = () => {
               <span className="text-sm text-gray-500 hidden sm:inline">
                 {user.username}
               </span>
-              <button
-                onClick={() => setIsSettingsOpen(true)}
-                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors touch-manipulation"
-                title="Paramétrage (Ctrl+Shift+P)"
-              >
-                <Settings size={18} />
-              </button>
+
+              {/* Bouton changement de mot de passe (tous les utilisateurs) */}
+              <ChangePasswordButton />
+
+              {/* Bouton Settings (admin et superadmin uniquement) */}
+              {permissions.canAccessSettings && (
+                <button
+                  onClick={() => setIsSettingsOpen(true)}
+                  className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors touch-manipulation"
+                  title="Paramétrage (Ctrl+Shift+P)"
+                >
+                  <Settings size={18} />
+                </button>
+              )}
+
               <button
                 onClick={logout}
                 className="flex items-center gap-1.5 px-3 py-2 text-sm text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors touch-manipulation"

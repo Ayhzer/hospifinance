@@ -8,6 +8,7 @@ import { formatCurrency } from '../../utils/formatters';
 import { calculateAvailable, calculateUsageRate } from '../../utils/calculations';
 import { exportToCSV, exportToJSON, exportOpexTemplate } from '../../utils/exportUtils';
 import { importOpexFromCSV } from '../../utils/importUtils';
+import { usePermissions } from '../../contexts/PermissionsContext';
 import { Button } from '../common/Button';
 import { ProgressBar } from '../common/ProgressBar';
 import { ConfirmDialog } from '../common/ConfirmDialog';
@@ -15,6 +16,7 @@ import ImportModal from '../common/ImportModal';
 
 export const OpexTable = ({ suppliers, totals, onEdit, onDelete, onAdd, onImport, columnVisibility = {} }) => {
   const col = (key) => (columnVisibility || {})[key] !== false;
+  const permissions = usePermissions();
   const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, supplier: null });
   const [importModalOpen, setImportModalOpen] = useState(false);
 
@@ -47,52 +49,62 @@ export const OpexTable = ({ suppliers, totals, onEdit, onDelete, onAdd, onImport
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-3">
         <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-800">Gestion OPEX - Fournisseurs</h2>
         <div className="flex flex-wrap gap-2 sm:gap-3 w-full sm:w-auto">
-          <Button
-            variant="secondary"
-            icon={<FileDown size={16} />}
-            size="sm"
-            onClick={exportOpexTemplate}
-            className="flex-1 sm:flex-none"
-            title="Télécharger un modèle CSV vierge"
-          >
-            <span className="hidden sm:inline">Modèle</span>
-            <span className="sm:hidden">📄</span>
-          </Button>
-          <Button
-            variant="secondary"
-            icon={<FileUp size={16} />}
-            size="sm"
-            onClick={() => setImportModalOpen(true)}
-            className="flex-1 sm:flex-none"
-            title="Importer des fournisseurs depuis CSV"
-          >
-            <span className="hidden sm:inline">Importer</span>
-            <span className="sm:hidden">📥</span>
-          </Button>
-          <Button
-            variant="secondary"
-            icon={<Download size={16} />}
-            size="sm"
-            onClick={() => exportToCSV(suppliers, 'opex_fournisseurs')}
-            className="flex-1 sm:flex-none"
-          >
-            <span className="hidden sm:inline">CSV</span>
-            <span className="sm:hidden">CSV</span>
-          </Button>
-          <Button
-            variant="secondary"
-            icon={<Download size={16} />}
-            size="sm"
-            onClick={() => exportToJSON(suppliers, 'opex_fournisseurs')}
-            className="flex-1 sm:flex-none"
-          >
-            <span className="hidden sm:inline">JSON</span>
-            <span className="sm:hidden">JSON</span>
-          </Button>
-          <Button variant="primary" icon={<Plus size={16} />} size="sm" onClick={onAdd} className="w-full sm:w-auto">
-            <span className="hidden sm:inline">Nouveau fournisseur</span>
-            <span className="sm:hidden">Nouveau</span>
-          </Button>
+          {permissions.canDownloadTemplate && (
+            <Button
+              variant="secondary"
+              icon={<FileDown size={16} />}
+              size="sm"
+              onClick={exportOpexTemplate}
+              className="flex-1 sm:flex-none"
+              title="Télécharger un modèle CSV vierge"
+            >
+              <span className="hidden sm:inline">Modèle</span>
+              <span className="sm:hidden">📄</span>
+            </Button>
+          )}
+          {permissions.can('import', 'opex') && (
+            <Button
+              variant="secondary"
+              icon={<FileUp size={16} />}
+              size="sm"
+              onClick={() => setImportModalOpen(true)}
+              className="flex-1 sm:flex-none"
+              title="Importer des fournisseurs depuis CSV"
+            >
+              <span className="hidden sm:inline">Importer</span>
+              <span className="sm:hidden">📥</span>
+            </Button>
+          )}
+          {permissions.can('export', 'opex') && (
+            <>
+              <Button
+                variant="secondary"
+                icon={<Download size={16} />}
+                size="sm"
+                onClick={() => exportToCSV(suppliers, 'opex_fournisseurs')}
+                className="flex-1 sm:flex-none"
+              >
+                <span className="hidden sm:inline">CSV</span>
+                <span className="sm:hidden">CSV</span>
+              </Button>
+              <Button
+                variant="secondary"
+                icon={<Download size={16} />}
+                size="sm"
+                onClick={() => exportToJSON(suppliers, 'opex_fournisseurs')}
+                className="flex-1 sm:flex-none"
+              >
+                <span className="hidden sm:inline">JSON</span>
+                <span className="sm:hidden">JSON</span>
+              </Button>
+            </>
+          )}
+          {permissions.can('add', 'opex') && (
+            <Button variant="primary" icon={<Plus size={16} />} size="sm" onClick={onAdd} className="w-full sm:w-auto">
+              <span className="hidden sm:inline">Nouveau fournisseur</span>
+              <span className="sm:hidden">Nouveau</span>
+            </Button>
+          )}
         </div>
       </div>
 
@@ -204,20 +216,24 @@ export const OpexTable = ({ suppliers, totals, onEdit, onDelete, onAdd, onImport
                   </td>
                   <td className="px-2 sm:px-4 py-2 sm:py-3">
                     <div className="flex gap-1 sm:gap-2 justify-center">
-                      <button
-                        onClick={() => onEdit(supplier)}
-                        className="p-1 text-blue-600 hover:bg-blue-50 rounded touch-manipulation"
-                        title="Modifier"
-                      >
-                        <Edit2 size={16} />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteClick(supplier)}
-                        className="p-1 text-red-600 hover:bg-red-50 rounded touch-manipulation"
-                        title="Supprimer"
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                      {permissions.can('edit', 'opex') && (
+                        <button
+                          onClick={() => onEdit(supplier)}
+                          className="p-1 text-blue-600 hover:bg-blue-50 rounded touch-manipulation"
+                          title="Modifier"
+                        >
+                          <Edit2 size={16} />
+                        </button>
+                      )}
+                      {permissions.can('delete', 'opex') && (
+                        <button
+                          onClick={() => handleDeleteClick(supplier)}
+                          className="p-1 text-red-600 hover:bg-red-50 rounded touch-manipulation"
+                          title="Supprimer"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

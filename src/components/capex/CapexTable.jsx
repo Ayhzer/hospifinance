@@ -8,6 +8,7 @@ import { formatCurrency, formatDate } from '../../utils/formatters';
 import { calculateAvailable, calculateUsageRate } from '../../utils/calculations';
 import { exportToCSV, exportToJSON, exportCapexTemplate } from '../../utils/exportUtils';
 import { importCapexFromCSV } from '../../utils/importUtils';
+import { usePermissions } from '../../contexts/PermissionsContext';
 import { STATUS_COLORS } from '../../constants/budgetConstants';
 import { Button } from '../common/Button';
 import { ProgressBar } from '../common/ProgressBar';
@@ -15,6 +16,7 @@ import { ConfirmDialog } from '../common/ConfirmDialog';
 import ImportModal from '../common/ImportModal';
 
 export const CapexTable = ({ projects, totals, onEdit, onDelete, onAdd, onImport }) => {
+  const permissions = usePermissions();
   const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, project: null });
   const [importModalOpen, setImportModalOpen] = useState(false);
 
@@ -46,39 +48,49 @@ export const CapexTable = ({ projects, totals, onEdit, onDelete, onAdd, onImport
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold text-gray-800">Gestion CAPEX - Projets</h2>
         <div className="flex gap-3">
-          <Button
-            variant="secondary"
-            icon={<FileDown size={16} />}
-            onClick={exportCapexTemplate}
-            title="Télécharger un modèle CSV vierge"
-          >
-            Modèle
-          </Button>
-          <Button
-            variant="secondary"
-            icon={<FileUp size={16} />}
-            onClick={() => setImportModalOpen(true)}
-            title="Importer des projets depuis CSV"
-          >
-            Importer
-          </Button>
-          <Button
-            variant="secondary"
-            icon={<Download size={16} />}
-            onClick={() => exportToCSV(projects, 'capex_projets')}
-          >
-            CSV
-          </Button>
-          <Button
-            variant="secondary"
-            icon={<Download size={16} />}
-            onClick={() => exportToJSON(projects, 'capex_projets')}
-          >
-            JSON
-          </Button>
-          <Button variant="success" icon={<Plus size={16} />} onClick={onAdd}>
-            Nouveau projet
-          </Button>
+          {permissions.canDownloadTemplate && (
+            <Button
+              variant="secondary"
+              icon={<FileDown size={16} />}
+              onClick={exportCapexTemplate}
+              title="Télécharger un modèle CSV vierge"
+            >
+              Modèle
+            </Button>
+          )}
+          {permissions.can('import', 'capex') && (
+            <Button
+              variant="secondary"
+              icon={<FileUp size={16} />}
+              onClick={() => setImportModalOpen(true)}
+              title="Importer des projets depuis CSV"
+            >
+              Importer
+            </Button>
+          )}
+          {permissions.can('export', 'capex') && (
+            <>
+              <Button
+                variant="secondary"
+                icon={<Download size={16} />}
+                onClick={() => exportToCSV(projects, 'capex_projets')}
+              >
+                CSV
+              </Button>
+              <Button
+                variant="secondary"
+                icon={<Download size={16} />}
+                onClick={() => exportToJSON(projects, 'capex_projets')}
+              >
+                JSON
+              </Button>
+            </>
+          )}
+          {permissions.can('add', 'capex') && (
+            <Button variant="success" icon={<Plus size={16} />} onClick={onAdd}>
+              Nouveau projet
+            </Button>
+          )}
         </div>
       </div>
 
@@ -192,20 +204,24 @@ export const CapexTable = ({ projects, totals, onEdit, onDelete, onAdd, onImport
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex gap-2 justify-center">
-                      <button
-                        onClick={() => onEdit(project)}
-                        className="p-1 text-blue-600 hover:bg-blue-50 rounded"
-                        title="Modifier"
-                      >
-                        <Edit2 size={16} />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteClick(project)}
-                        className="p-1 text-red-600 hover:bg-red-50 rounded"
-                        title="Supprimer"
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                      {permissions.can('edit', 'capex') && (
+                        <button
+                          onClick={() => onEdit(project)}
+                          className="p-1 text-blue-600 hover:bg-blue-50 rounded"
+                          title="Modifier"
+                        >
+                          <Edit2 size={16} />
+                        </button>
+                      )}
+                      {permissions.can('delete', 'capex') && (
+                        <button
+                          onClick={() => handleDeleteClick(project)}
+                          className="p-1 text-red-600 hover:bg-red-50 rounded"
+                          title="Supprimer"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

@@ -5,27 +5,38 @@
 
 import { useEffect, useRef, useCallback } from 'react';
 import { useSettings } from '../contexts/SettingsContext';
+import { usePermissions } from '../contexts/PermissionsContext';
 
 export const useSettingsShortcut = () => {
   const { setIsSettingsOpen } = useSettings();
+  const { canAccessSettings } = usePermissions();
   const clickCountRef = useRef(0);
   const clickTimerRef = useRef(null);
 
-  // Raccourci clavier Ctrl+Shift+P
+  // Raccourci clavier Ctrl+Shift+P (uniquement si autorisé)
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.ctrlKey && e.shiftKey && e.key === 'P') {
         e.preventDefault();
-        setIsSettingsOpen(prev => !prev);
+
+        // Vérifier les permissions avant d'ouvrir
+        if (canAccessSettings) {
+          setIsSettingsOpen(prev => !prev);
+        }
       }
     };
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [setIsSettingsOpen]);
+  }, [setIsSettingsOpen, canAccessSettings]);
 
-  // Triple-clic sur le titre
+  // Triple-clic sur le titre (uniquement si autorisé)
   const handleTitleClick = useCallback(() => {
+    // Bloquer si pas de permissions
+    if (!canAccessSettings) {
+      return;
+    }
+
     clickCountRef.current += 1;
 
     if (clickTimerRef.current) {
@@ -40,7 +51,7 @@ export const useSettingsShortcut = () => {
         clickCountRef.current = 0;
       }, 500);
     }
-  }, [setIsSettingsOpen]);
+  }, [setIsSettingsOpen, canAccessSettings]);
 
   return { handleTitleClick };
 };

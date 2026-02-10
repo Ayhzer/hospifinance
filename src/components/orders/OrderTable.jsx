@@ -6,11 +6,13 @@ import React, { useState, useCallback } from 'react';
 import { Edit2, Trash2, Download, Plus } from 'lucide-react';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { exportToCSV, exportToJSON } from '../../utils/exportUtils';
+import { usePermissions } from '../../contexts/PermissionsContext';
 import { Button } from '../common/Button';
 import { ConfirmDialog } from '../common/ConfirmDialog';
 import { ORDER_STATUS_COLORS } from '../../constants/orderConstants';
 
 export const OrderTable = ({ orders, parentItems, parentLabel, parentNameKey, type, onEdit, onDelete, onAdd }) => {
+  const permissions = usePermissions();
   const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, order: null });
 
   const handleDeleteClick = useCallback((order) => {
@@ -47,16 +49,22 @@ export const OrderTable = ({ orders, parentItems, parentLabel, parentNameKey, ty
           Commandes {type === 'opex' ? 'OPEX' : 'CAPEX'}
         </h2>
         <div className="flex flex-wrap gap-2 sm:gap-3 w-full sm:w-auto">
-          <Button variant="secondary" icon={<Download size={16} />} size="sm" onClick={() => exportToCSV(exportData, `commandes_${type}`)} className="flex-1 sm:flex-none">
-            CSV
-          </Button>
-          <Button variant="secondary" icon={<Download size={16} />} size="sm" onClick={() => exportToJSON(exportData, `commandes_${type}`)} className="flex-1 sm:flex-none">
-            JSON
-          </Button>
-          <Button variant="primary" icon={<Plus size={16} />} size="sm" onClick={onAdd} className="w-full sm:w-auto">
-            <span className="hidden sm:inline">Nouvelle commande</span>
-            <span className="sm:hidden">Nouveau</span>
-          </Button>
+          {permissions.can('export', 'orders') && (
+            <>
+              <Button variant="secondary" icon={<Download size={16} />} size="sm" onClick={() => exportToCSV(exportData, `commandes_${type}`)} className="flex-1 sm:flex-none">
+                CSV
+              </Button>
+              <Button variant="secondary" icon={<Download size={16} />} size="sm" onClick={() => exportToJSON(exportData, `commandes_${type}`)} className="flex-1 sm:flex-none">
+                JSON
+              </Button>
+            </>
+          )}
+          {permissions.can('add', 'orders') && (
+            <Button variant="primary" icon={<Plus size={16} />} size="sm" onClick={onAdd} className="w-full sm:w-auto">
+              <span className="hidden sm:inline">Nouvelle commande</span>
+              <span className="sm:hidden">Nouveau</span>
+            </Button>
+          )}
         </div>
       </div>
 
@@ -110,20 +118,24 @@ export const OrderTable = ({ orders, parentItems, parentLabel, parentNameKey, ty
                       </td>
                       <td className="px-2 sm:px-4 py-2 sm:py-3">
                         <div className="flex gap-1 sm:gap-2 justify-center">
-                          <button
-                            onClick={() => onEdit(order)}
-                            className="p-1 text-blue-600 hover:bg-blue-50 rounded touch-manipulation"
-                            title="Modifier"
-                          >
-                            <Edit2 size={16} />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteClick(order)}
-                            className="p-1 text-red-600 hover:bg-red-50 rounded touch-manipulation"
-                            title="Supprimer"
-                          >
-                            <Trash2 size={16} />
-                          </button>
+                          {permissions.can('edit', 'orders') && (
+                            <button
+                              onClick={() => onEdit(order)}
+                              className="p-1 text-blue-600 hover:bg-blue-50 rounded touch-manipulation"
+                              title="Modifier"
+                            >
+                              <Edit2 size={16} />
+                            </button>
+                          )}
+                          {permissions.can('delete', 'orders') && (
+                            <button
+                              onClick={() => handleDeleteClick(order)}
+                              className="p-1 text-red-600 hover:bg-red-50 rounded touch-manipulation"
+                              title="Supprimer"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>

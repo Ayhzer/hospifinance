@@ -52,6 +52,12 @@ const DEFAULT_SETTINGS = {
   rules: {
     warningThreshold: 75,
     criticalThreshold: 90
+  },
+
+  // Colonnes personnalisées
+  customColumns: {
+    opex: [],
+    capex: []
   }
 };
 
@@ -70,7 +76,11 @@ export const SettingsProvider = ({ children }) => {
         colors: { ...DEFAULT_SETTINGS.colors, ...(stored.colors || {}) },
         opexColumns: { ...DEFAULT_SETTINGS.opexColumns, ...(stored.opexColumns || {}) },
         capexColumns: { ...DEFAULT_SETTINGS.capexColumns, ...(stored.capexColumns || {}) },
-        rules: { ...DEFAULT_SETTINGS.rules, ...(stored.rules || {}) }
+        rules: { ...DEFAULT_SETTINGS.rules, ...(stored.rules || {}) },
+        customColumns: {
+          opex: stored.customColumns?.opex || [],
+          capex: stored.customColumns?.capex || []
+        }
       }));
     }
   }, []);
@@ -143,6 +153,67 @@ export const SettingsProvider = ({ children }) => {
     saveSettings(DEFAULT_SETTINGS);
   }, []);
 
+  /**
+   * Ajoute une colonne personnalisée
+   */
+  const addCustomColumn = useCallback((type, column) => {
+    setSettings(prev => {
+      const newColumn = {
+        id: `custom_${Date.now()}`,
+        name: column.name,
+        type: column.type || 'text',
+        required: column.required || false,
+        order: column.order || 100
+      };
+
+      const updated = {
+        ...prev,
+        customColumns: {
+          ...prev.customColumns,
+          [type]: [...prev.customColumns[type], newColumn]
+        }
+      };
+      saveSettings(updated);
+      return updated;
+    });
+  }, []);
+
+  /**
+   * Supprime une colonne personnalisée
+   */
+  const removeCustomColumn = useCallback((type, columnId) => {
+    setSettings(prev => {
+      const updated = {
+        ...prev,
+        customColumns: {
+          ...prev.customColumns,
+          [type]: prev.customColumns[type].filter(col => col.id !== columnId)
+        }
+      };
+      saveSettings(updated);
+      return updated;
+    });
+  }, []);
+
+  /**
+   * Met à jour une colonne personnalisée
+   */
+  const updateCustomColumn = useCallback((type, columnId, updates) => {
+    setSettings(prev => {
+      const updated = {
+        ...prev,
+        customColumns: {
+          ...prev.customColumns,
+          [type]: prev.customColumns[type].map(col =>
+            col.id === columnId ? { ...col, ...updates } : col
+          )
+        }
+      };
+      saveSettings(updated);
+      return updated;
+    });
+  }, []);
+
   return (
     <SettingsContext.Provider value={{
       settings,
@@ -154,6 +225,9 @@ export const SettingsProvider = ({ children }) => {
       toggleCapexColumn,
       updateRules,
       resetSettings,
+      addCustomColumn,
+      removeCustomColumn,
+      updateCustomColumn,
       DEFAULT_SETTINGS
     }}>
       {children}

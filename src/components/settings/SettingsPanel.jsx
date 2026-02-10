@@ -8,10 +8,13 @@ import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
 import { useSettings } from '../../contexts/SettingsContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { usePermissions } from '../../contexts/PermissionsContext';
+import CustomColumnsManager from './CustomColumnsManager';
 
 const SETTINGS_TABS = [
   { id: 'appearance', label: 'Apparence', icon: Palette },
   { id: 'columns', label: 'Colonnes', icon: Columns },
+  { id: 'customColumns', label: 'Colonnes personnalisées', icon: Columns },
   { id: 'rules', label: 'Règles', icon: Shield },
   { id: 'users', label: 'Utilisateurs', icon: Users },
   { id: 'logs', label: 'Logs', icon: FileText }
@@ -74,6 +77,7 @@ const LOG_TYPE_LABELS = {
 export const SettingsPanel = () => {
   const { settings, isSettingsOpen, setIsSettingsOpen, updateColors, updateSettings, toggleOpexColumn, toggleCapexColumn, updateRules, resetSettings } = useSettings();
   const { users, addUser, deleteUser, toggleUserDisabled, changePassword, isAdmin, isSuperAdmin, authLogs, clearLogs } = useAuth();
+  const { canManageColumns } = usePermissions();
   const [activeSettingsTab, setActiveSettingsTab] = useState('appearance');
   const [newUsername, setNewUsername] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -135,7 +139,13 @@ export const SettingsPanel = () => {
     >
       {/* Onglets internes */}
       <div className="flex border-b border-gray-200 mb-4 -mx-1 overflow-x-auto">
-        {SETTINGS_TABS.map(tab => {
+        {SETTINGS_TABS.filter(tab => {
+          // Filtrer l'onglet colonnes personnalisées selon permissions
+          if (tab.id === 'customColumns' && !canManageColumns) return false;
+          // Filtrer users et logs pour admins uniquement
+          if ((tab.id === 'users' || tab.id === 'logs') && !isAdmin) return false;
+          return true;
+        }).map(tab => {
           const Icon = tab.icon;
           return (
             <button
@@ -288,6 +298,11 @@ export const SettingsPanel = () => {
               </div>
             </div>
           </div>
+        )}
+
+        {/* Colonnes personnalisées */}
+        {activeSettingsTab === 'customColumns' && (
+          <CustomColumnsManager />
         )}
 
         {/* Gestion des utilisateurs */}

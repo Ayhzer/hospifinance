@@ -91,8 +91,17 @@ export const useCapexData = () => {
       return { success: false, errors: validation.errors };
     }
 
+    // Extraire les colonnes personnalisées
+    const customFields = {};
+    Object.keys(projectData).forEach(key => {
+      if (key.startsWith('custom_')) {
+        customFields[key] = projectData[key];
+      }
+    });
+
     const newProject = {
       id: Date.now() + Math.random(), // ID plus robuste
+      enveloppe: projectData.enveloppe || 'Autre',
       project: sanitizeString(projectData.project),
       budgetTotal: parseNumber(projectData.budgetTotal, 0),
       depense: parseNumber(projectData.depense, 0),
@@ -100,7 +109,8 @@ export const useCapexData = () => {
       dateDebut: projectData.dateDebut || '',
       dateFin: projectData.dateFin || '',
       status: projectData.status || 'Planifié',
-      notes: sanitizeString(projectData.notes)
+      notes: sanitizeString(projectData.notes),
+      ...customFields // Inclure les colonnes personnalisées
     };
 
     setProjects(prev => [...prev, newProject]);
@@ -119,8 +129,17 @@ export const useCapexData = () => {
       return { success: false, errors: validation.errors };
     }
 
+    // Extraire les colonnes personnalisées
+    const customFields = {};
+    Object.keys(projectData).forEach(key => {
+      if (key.startsWith('custom_')) {
+        customFields[key] = projectData[key];
+      }
+    });
+
     const updatedProject = {
       id,
+      enveloppe: projectData.enveloppe || 'Autre',
       project: sanitizeString(projectData.project),
       budgetTotal: parseNumber(projectData.budgetTotal, 0),
       depense: parseNumber(projectData.depense, 0),
@@ -128,7 +147,8 @@ export const useCapexData = () => {
       dateDebut: projectData.dateDebut || '',
       dateFin: projectData.dateFin || '',
       status: projectData.status || 'Planifié',
-      notes: sanitizeString(projectData.notes)
+      notes: sanitizeString(projectData.notes),
+      ...customFields // Inclure les colonnes personnalisées
     };
 
     setProjects(prev => prev.map(p => p.id === id ? updatedProject : p));

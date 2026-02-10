@@ -8,6 +8,7 @@ import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
 import { Input, TextArea, Select } from '../common/Input';
 import { PROJECT_STATUS, ENVELOPPES_CAPEX } from '../../constants/budgetConstants';
+import { useSettings } from '../../contexts/SettingsContext';
 
 const EMPTY_FORM = {
   enveloppe: 'Autre',
@@ -32,15 +33,24 @@ const ENVELOPPE_OPTIONS = ENVELOPPES_CAPEX.map((env) => ({
 }));
 
 export const CapexModal = ({ isOpen, onClose, onSave, editingProject }) => {
+  const { settings } = useSettings();
   const [formData, setFormData] = useState(EMPTY_FORM);
+
+  // Colonnes personnalisées pour CAPEX
+  const customColumns = settings.customColumns?.capex || [];
 
   useEffect(() => {
     if (editingProject) {
       setFormData(editingProject);
     } else {
-      setFormData(EMPTY_FORM);
+      // Initialiser les champs custom à vide
+      const emptyForm = { ...EMPTY_FORM };
+      customColumns.forEach(col => {
+        emptyForm[col.id] = '';
+      });
+      setFormData(emptyForm);
     }
-  }, [editingProject, isOpen]);
+  }, [editingProject, isOpen, customColumns]);
 
   const handleChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -144,6 +154,47 @@ export const CapexModal = ({ isOpen, onClose, onSave, editingProject }) => {
           placeholder="Informations complémentaires..."
           rows={3}
         />
+
+        {/* Colonnes personnalisées */}
+        {customColumns.length > 0 && (
+          <div className="border-t pt-4 space-y-4">
+            <h4 className="text-sm font-semibold text-gray-700">Champs personnalisés</h4>
+            <div className="grid grid-cols-2 gap-4">
+              {customColumns.map((column) => (
+                <div key={column.id}>
+                  {column.type === 'text' && (
+                    <Input
+                      label={column.name}
+                      required={column.required}
+                      value={formData[column.id] || ''}
+                      onChange={(e) => handleChange(column.id, e.target.value)}
+                      placeholder={`Entrez ${column.name.toLowerCase()}`}
+                    />
+                  )}
+                  {column.type === 'number' && (
+                    <Input
+                      label={column.name}
+                      type="number"
+                      required={column.required}
+                      value={formData[column.id] || ''}
+                      onChange={(e) => handleChange(column.id, e.target.value)}
+                      placeholder="0"
+                    />
+                  )}
+                  {column.type === 'date' && (
+                    <Input
+                      label={column.name}
+                      type="date"
+                      required={column.required}
+                      value={formData[column.id] || ''}
+                      onChange={(e) => handleChange(column.id, e.target.value)}
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </Modal>
   );

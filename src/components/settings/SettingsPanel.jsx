@@ -352,6 +352,7 @@ export const SettingsPanel = () => {
                 const isSuperAdminUser = u.username === 'admin';
                 const canManage = isAdmin && !isSuperAdminUser || isSuperAdmin;
                 const canDelete = isSuperAdmin && !isSuperAdminUser;
+                const canChangePassword = isSuperAdmin || (isAdmin && !isSuperAdminUser);
 
                 return (
                   <div
@@ -394,9 +395,11 @@ export const SettingsPanel = () => {
                           </div>
                         ) : (
                           <>
-                            <Button variant="secondary" size="sm" onClick={() => setChangePasswordId(u.id)}>
-                              MDP
-                            </Button>
+                            {canChangePassword && (
+                              <Button variant="secondary" size="sm" onClick={() => setChangePasswordId(u.id)}>
+                                MDP
+                              </Button>
+                            )}
                             {/* Bouton activer/désactiver - pas sur le superadmin */}
                             {!isSuperAdminUser && (
                               <Button

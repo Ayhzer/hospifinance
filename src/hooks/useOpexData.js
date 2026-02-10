@@ -82,6 +82,14 @@ export const useOpexData = () => {
       return { success: false, errors: validation.errors };
     }
 
+    // Extraire les colonnes personnalisées
+    const customFields = {};
+    Object.keys(supplierData).forEach(key => {
+      if (key.startsWith('custom_')) {
+        customFields[key] = supplierData[key];
+      }
+    });
+
     const newSupplier = {
       id: Date.now() + Math.random(), // ID plus robuste
       supplier: sanitizeString(supplierData.supplier),
@@ -89,7 +97,8 @@ export const useOpexData = () => {
       budgetAnnuel: parseNumber(supplierData.budgetAnnuel, 0),
       depenseActuelle: parseNumber(supplierData.depenseActuelle, 0),
       engagement: parseNumber(supplierData.engagement, 0),
-      notes: sanitizeString(supplierData.notes)
+      notes: sanitizeString(supplierData.notes),
+      ...customFields // Inclure les colonnes personnalisées
     };
 
     setSuppliers(prev => [...prev, newSupplier]);
@@ -108,6 +117,14 @@ export const useOpexData = () => {
       return { success: false, errors: validation.errors };
     }
 
+    // Extraire les colonnes personnalisées
+    const customFields = {};
+    Object.keys(supplierData).forEach(key => {
+      if (key.startsWith('custom_')) {
+        customFields[key] = supplierData[key];
+      }
+    });
+
     const updatedSupplier = {
       id,
       supplier: sanitizeString(supplierData.supplier),
@@ -115,7 +132,8 @@ export const useOpexData = () => {
       budgetAnnuel: parseNumber(supplierData.budgetAnnuel, 0),
       depenseActuelle: parseNumber(supplierData.depenseActuelle, 0),
       engagement: parseNumber(supplierData.engagement, 0),
-      notes: sanitizeString(supplierData.notes)
+      notes: sanitizeString(supplierData.notes),
+      ...customFields // Inclure les colonnes personnalisées
     };
 
     setSuppliers(prev => prev.map(s => s.id === id ? updatedSupplier : s));

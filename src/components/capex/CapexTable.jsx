@@ -9,6 +9,7 @@ import { calculateAvailable, calculateUsageRate } from '../../utils/calculations
 import { exportToCSV, exportToJSON, exportCapexTemplate } from '../../utils/exportUtils';
 import { importCapexFromCSV } from '../../utils/importUtils';
 import { usePermissions } from '../../contexts/PermissionsContext';
+import { useSettings } from '../../contexts/SettingsContext';
 import { STATUS_COLORS, ENVELOPPE_COLORS } from '../../constants/budgetConstants';
 import { Button } from '../common/Button';
 import { ProgressBar } from '../common/ProgressBar';
@@ -18,8 +19,12 @@ import EnveloppesSummary from './EnveloppesSummary';
 
 export const CapexTable = ({ projects, totals, onEdit, onDelete, onAdd, onImport, calculateEnveloppeTotal, getUsedEnveloppes }) => {
   const permissions = usePermissions();
+  const { settings } = useSettings();
   const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, project: null });
   const [importModalOpen, setImportModalOpen] = useState(false);
+
+  // Colonnes personnalisées pour CAPEX
+  const customColumns = settings.customColumns?.capex || [];
 
   const handleDeleteClick = useCallback((project) => {
     setDeleteConfirm({ isOpen: true, project });
@@ -149,6 +154,11 @@ export const CapexTable = ({ projects, totals, onEdit, onDelete, onAdd, onImport
               </th>
               <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700">Période</th>
               <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Notes</th>
+              {customColumns.map(column => (
+                <th key={column.id} className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
+                  {column.name}
+                </th>
+              ))}
               <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700">Actions</th>
             </tr>
           </thead>
@@ -218,6 +228,11 @@ export const CapexTable = ({ projects, totals, onEdit, onDelete, onAdd, onImport
                   <td className="px-4 py-3 text-sm text-gray-600 max-w-xs truncate">
                     {project.notes}
                   </td>
+                  {customColumns.map(column => (
+                    <td key={column.id} className="px-4 py-3 text-sm text-gray-700">
+                      {project[column.id] || '-'}
+                    </td>
+                  ))}
                   <td className="px-4 py-3">
                     <div className="flex gap-2 justify-center">
                       {permissions.can('edit', 'capex') && (

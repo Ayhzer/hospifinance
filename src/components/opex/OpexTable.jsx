@@ -9,6 +9,7 @@ import { calculateAvailable, calculateUsageRate } from '../../utils/calculations
 import { exportToCSV, exportToJSON, exportOpexTemplate } from '../../utils/exportUtils';
 import { importOpexFromCSV } from '../../utils/importUtils';
 import { usePermissions } from '../../contexts/PermissionsContext';
+import { useSettings } from '../../contexts/SettingsContext';
 import { Button } from '../common/Button';
 import { ProgressBar } from '../common/ProgressBar';
 import { ConfirmDialog } from '../common/ConfirmDialog';
@@ -17,8 +18,12 @@ import ImportModal from '../common/ImportModal';
 export const OpexTable = ({ suppliers, totals, onEdit, onDelete, onAdd, onImport, columnVisibility = {} }) => {
   const col = (key) => (columnVisibility || {})[key] !== false;
   const permissions = usePermissions();
+  const { settings } = useSettings();
   const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, supplier: null });
   const [importModalOpen, setImportModalOpen] = useState(false);
+
+  // Colonnes personnalisées pour OPEX
+  const customColumns = settings.customColumns?.opex || [];
 
   const handleDeleteClick = useCallback((supplier) => {
     setDeleteConfirm({ isOpen: true, supplier });
@@ -163,6 +168,11 @@ export const OpexTable = ({ suppliers, totals, onEdit, onDelete, onAdd, onImport
               <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs sm:text-sm font-semibold text-gray-700 whitespace-nowrap">
                 Notes
               </th>
+              {customColumns.map(column => (
+                <th key={column.id} className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs sm:text-sm font-semibold text-gray-700 whitespace-nowrap">
+                  {column.name}
+                </th>
+              ))}
               <th className="px-2 sm:px-4 py-2 sm:py-3 text-center text-xs sm:text-sm font-semibold text-gray-700 whitespace-nowrap">
                 Actions
               </th>
@@ -214,6 +224,11 @@ export const OpexTable = ({ suppliers, totals, onEdit, onDelete, onAdd, onImport
                   <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-gray-600 max-w-[120px] sm:max-w-xs truncate">
                     {supplier.notes}
                   </td>
+                  {customColumns.map(column => (
+                    <td key={column.id} className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-gray-700 whitespace-nowrap">
+                      {supplier[column.id] || '-'}
+                    </td>
+                  ))}
                   <td className="px-2 sm:px-4 py-2 sm:py-3">
                     <div className="flex gap-1 sm:gap-2 justify-center">
                       {permissions.can('edit', 'opex') && (

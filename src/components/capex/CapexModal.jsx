@@ -7,9 +7,10 @@ import { Save } from 'lucide-react';
 import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
 import { Input, TextArea, Select } from '../common/Input';
-import { PROJECT_STATUS } from '../../constants/budgetConstants';
+import { PROJECT_STATUS, ENVELOPPES_CAPEX } from '../../constants/budgetConstants';
 
 const EMPTY_FORM = {
+  enveloppe: 'Autre',
   project: '',
   budgetTotal: '',
   depense: '',
@@ -23,6 +24,11 @@ const EMPTY_FORM = {
 const STATUS_OPTIONS = Object.values(PROJECT_STATUS).map((status) => ({
   value: status,
   label: status
+}));
+
+const ENVELOPPE_OPTIONS = ENVELOPPES_CAPEX.map((env) => ({
+  value: env,
+  label: env
 }));
 
 export const CapexModal = ({ isOpen, onClose, onSave, editingProject }) => {
@@ -63,6 +69,14 @@ export const CapexModal = ({ isOpen, onClose, onSave, editingProject }) => {
       }
     >
       <div className="space-y-4">
+        <Select
+          label="Enveloppe budgétaire"
+          required
+          value={formData.enveloppe}
+          onChange={(e) => handleChange('enveloppe', e.target.value)}
+          options={ENVELOPPE_OPTIONS}
+        />
+
         <Input
           label="Nom du projet"
           required

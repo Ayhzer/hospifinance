@@ -9,13 +9,14 @@ import { calculateAvailable, calculateUsageRate } from '../../utils/calculations
 import { exportToCSV, exportToJSON, exportCapexTemplate } from '../../utils/exportUtils';
 import { importCapexFromCSV } from '../../utils/importUtils';
 import { usePermissions } from '../../contexts/PermissionsContext';
-import { STATUS_COLORS } from '../../constants/budgetConstants';
+import { STATUS_COLORS, ENVELOPPE_COLORS } from '../../constants/budgetConstants';
 import { Button } from '../common/Button';
 import { ProgressBar } from '../common/ProgressBar';
 import { ConfirmDialog } from '../common/ConfirmDialog';
 import ImportModal from '../common/ImportModal';
+import EnveloppesSummary from './EnveloppesSummary';
 
-export const CapexTable = ({ projects, totals, onEdit, onDelete, onAdd, onImport }) => {
+export const CapexTable = ({ projects, totals, onEdit, onDelete, onAdd, onImport, calculateEnveloppeTotal, getUsedEnveloppes }) => {
   const permissions = usePermissions();
   const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, project: null });
   const [importModalOpen, setImportModalOpen] = useState(false);
@@ -119,10 +120,20 @@ export const CapexTable = ({ projects, totals, onEdit, onDelete, onAdd, onImport
         </div>
       </div>
 
+      {/* Synthèse par enveloppe */}
+      {calculateEnveloppeTotal && getUsedEnveloppes && (
+        <EnveloppesSummary
+          projects={projects}
+          calculateEnveloppeTotal={calculateEnveloppeTotal}
+          getUsedEnveloppes={getUsedEnveloppes}
+        />
+      )}
+
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
             <tr className="bg-gray-50 border-b">
+              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Enveloppe</th>
               <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Projet</th>
               <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700">Statut</th>
               <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700">
@@ -156,6 +167,11 @@ export const CapexTable = ({ projects, totals, onEdit, onDelete, onAdd, onImport
 
               return (
                 <tr key={project.id} className="border-b hover:bg-gray-50">
+                  <td className="px-4 py-3">
+                    <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${ENVELOPPE_COLORS[project.enveloppe] || ENVELOPPE_COLORS['Autre']}`}>
+                      {project.enveloppe || 'Autre'}
+                    </span>
+                  </td>
                   <td className="px-4 py-3 text-sm font-medium text-gray-900">{project.project}</td>
                   <td className="px-4 py-3">
                     <span

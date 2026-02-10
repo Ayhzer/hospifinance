@@ -80,6 +80,8 @@ const HospitalITFinanceDashboard = () => {
     addProject,
     updateProject,
     deleteProject,
+    calculateEnveloppeTotal,
+    getUsedEnveloppes,
     setError: setCapexError
   } = useCapexData();
 
@@ -392,6 +394,8 @@ const HospitalITFinanceDashboard = () => {
             onDelete={handleDeleteCapex}
             onAdd={handleAddCapex}
             onImport={handleImportCapex}
+            calculateEnveloppeTotal={calculateEnveloppeTotal}
+            getUsedEnveloppes={getUsedEnveloppes}
             columnVisibility={settings.capexColumns}
           />
         )}

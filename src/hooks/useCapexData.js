@@ -10,6 +10,7 @@ import { validateCapexData, parseNumber, sanitizeString } from '../utils/validat
 const DEFAULT_CAPEX_DATA = [
   {
     id: 1,
+    enveloppe: 'Infrastructure',
     project: 'Renouvellement Datacenter',
     budgetTotal: 2000000,
     depense: 1200000,
@@ -21,6 +22,7 @@ const DEFAULT_CAPEX_DATA = [
   },
   {
     id: 2,
+    enveloppe: 'Poste de travail',
     project: 'Déploiement VDI',
     budgetTotal: 800000,
     depense: 650000,
@@ -32,6 +34,7 @@ const DEFAULT_CAPEX_DATA = [
   },
   {
     id: 3,
+    enveloppe: 'Cybersécurité',
     project: 'Cybersécurité - SIEM',
     budgetTotal: 500000,
     depense: 500000,
@@ -150,6 +153,30 @@ export const useCapexData = () => {
     setError(null);
   }, []);
 
+  /**
+   * Calcule les totaux par enveloppe
+   */
+  const calculateEnveloppeTotal = useCallback((enveloppe) => {
+    const enveloppeProjects = projects.filter(p => p.enveloppe === enveloppe);
+
+    return enveloppeProjects.reduce((acc, project) => {
+      return {
+        budget: acc.budget + parseNumber(project.budgetTotal),
+        depense: acc.depense + parseNumber(project.depense),
+        engagement: acc.engagement + parseNumber(project.engagement),
+        count: acc.count + 1
+      };
+    }, { budget: 0, depense: 0, engagement: 0, count: 0 });
+  }, [projects]);
+
+  /**
+   * Récupère la liste de toutes les enveloppes utilisées
+   */
+  const getUsedEnveloppes = useCallback(() => {
+    const enveloppes = new Set(projects.map(p => p.enveloppe).filter(Boolean));
+    return Array.from(enveloppes).sort();
+  }, [projects]);
+
   return {
     projects,
     loading,
@@ -158,6 +185,8 @@ export const useCapexData = () => {
     updateProject,
     deleteProject,
     resetToDefaults,
+    calculateEnveloppeTotal,
+    getUsedEnveloppes,
     setError
   };
 };

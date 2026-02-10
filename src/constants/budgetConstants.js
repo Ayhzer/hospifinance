@@ -46,6 +46,26 @@ export const OPEX_CATEGORIES = [
   'Formation'
 ];
 
+// Enveloppes budgétaires CAPEX
+export const ENVELOPPES_CAPEX = [
+  'Infrastructure',
+  'Applications métier',
+  'Cybersécurité',
+  'Poste de travail',
+  'Télécom',
+  'Autre'
+];
+
+// Couleurs des enveloppes
+export const ENVELOPPE_COLORS = {
+  'Infrastructure': 'bg-blue-100 text-blue-800 border-blue-300',
+  'Applications métier': 'bg-purple-100 text-purple-800 border-purple-300',
+  'Cybersécurité': 'bg-red-100 text-red-800 border-red-300',
+  'Poste de travail': 'bg-green-100 text-green-800 border-green-300',
+  'Télécom': 'bg-orange-100 text-orange-800 border-orange-300',
+  'Autre': 'bg-gray-100 text-gray-800 border-gray-300'
+};
+
 // Configuration pour les exports
 export const EXPORT_CONFIG = {
   DATE_FORMAT: 'fr-FR',

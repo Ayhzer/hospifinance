@@ -3,7 +3,27 @@
  * Remplace storageService pour utiliser MongoDB via l'API
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+// Détection automatique de l'environnement
+const getApiBaseUrl = () => {
+  // Si variable d'environnement définie, l'utiliser
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+
+  // Sinon, détecter automatiquement selon l'URL du site
+  const isProduction = window.location.hostname === 'ayhzer.github.io';
+
+  return isProduction
+    ? 'https://hospifinance.onrender.com/api'
+    : 'http://localhost:3001/api';
+};
+
+const API_BASE_URL = getApiBaseUrl();
+
+// Log de l'URL utilisée (seulement en développement)
+if (import.meta.env.DEV) {
+  console.log('🔌 API URL:', API_BASE_URL);
+}
 
 /**
  * Récupération du token JWT depuis localStorage

@@ -16,11 +16,22 @@ export const useOpexData = () => {
   useEffect(() => {
     const loadData = async () => {
       try {
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+          // Pas de token, mode non connecté
+          setSuppliers([]);
+          setLoading(false);
+          return;
+        }
+
         const data = await api.getOpex();
         setSuppliers(data || []);
       } catch (err) {
-        console.error('Erreur chargement OPEX:', err);
-        setError(err.message);
+        // Ne logger l'erreur que si ce n'est pas un problème d'authentification
+        if (err.message && !err.message.includes('Token') && !err.message.includes('401')) {
+          console.error('Erreur chargement OPEX:', err);
+          setError(err.message);
+        }
         setSuppliers([]);
       } finally {
         setLoading(false);

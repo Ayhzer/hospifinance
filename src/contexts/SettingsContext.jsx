@@ -73,7 +73,7 @@ export const SettingsProvider = ({ children }) => {
       try {
         const token = localStorage.getItem('authToken');
         if (!token) {
-          // Pas de token, utiliser les settings par défaut
+          // Pas de token, utiliser les settings par défaut (mode non connecté)
           setLoading(false);
           return;
         }
@@ -94,7 +94,10 @@ export const SettingsProvider = ({ children }) => {
           }
         });
       } catch (error) {
-        console.error('Erreur chargement settings:', error);
+        // Ne logger l'erreur que si ce n'est pas un problème d'authentification
+        if (error.message && !error.message.includes('Token') && !error.message.includes('401')) {
+          console.error('Erreur chargement settings:', error);
+        }
         // En cas d'erreur, utiliser les settings par défaut
       } finally {
         setLoading(false);

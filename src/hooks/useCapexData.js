@@ -17,11 +17,22 @@ export const useCapexData = () => {
   useEffect(() => {
     const loadData = async () => {
       try {
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+          // Pas de token, mode non connecté
+          setProjects([]);
+          setLoading(false);
+          return;
+        }
+
         const data = await api.getCapex();
         setProjects(data || []);
       } catch (err) {
-        console.error('Erreur chargement CAPEX:', err);
-        setError(err.message);
+        // Ne logger l'erreur que si ce n'est pas un problème d'authentification
+        if (err.message && !err.message.includes('Token') && !err.message.includes('401')) {
+          console.error('Erreur chargement CAPEX:', err);
+          setError(err.message);
+        }
         setProjects([]);
       } finally {
         setLoading(false);

@@ -1,219 +1,142 @@
 /**
- * Contexte d'authentification
- * - Rôle superadmin réservé au compte "admin" (non supprimable, non désactivable)
- * - Possibilité de désactiver un utilisateur sans le supprimer
- * - Logs de connexion (succès, échec, déconnexion)
+ * Contexte d'authentification avec API MongoDB
+ * Version migrée pour utiliser l'API Render au lieu de localStorage
  */
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { hashPassword, verifyPassword } from '../utils/authUtils';
-import {
-  saveAuthUsers, loadAuthUsers,
-  saveAuthSession, loadAuthSession, clearAuthSession,
-  saveAuthLog, loadAuthLogs, clearAuthLogs
-} from '../services/storageService';
+import * as api from '../services/apiService';
 
 const AuthContext = createContext(null);
-
-const SUPERADMIN_USERNAME = 'admin';
-const DEFAULT_ADMIN_PASSWORD = 'admin';
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [users, setUsers] = useState([]);
-  const [authLogs, setAuthLogs] = useState([]);
+  const [authLogs, setAuthLogs] = useState([]); // TODO: implémenter les logs côté serveur
   const [loading, setLoading] = useState(true);
 
-  // Helper pour ajouter un log
-  const addLog = useCallback((type, username, detail = '') => {
-    const entry = {
-      id: Date.now(),
-      type,
-      username,
-      detail,
-      timestamp: new Date().toISOString()
-    };
-    saveAuthLog(entry);
-    setAuthLogs(prev => [entry, ...prev].slice(0, 200));
-  }, []);
-
-  // Initialisation
+  // Initialisation : vérifier si un token existe et récupérer l'utilisateur
   useEffect(() => {
     const init = async () => {
-      let storedUsers = loadAuthUsers();
-
-      if (!storedUsers || storedUsers.length === 0) {
-        const adminHash = await hashPassword(DEFAULT_ADMIN_PASSWORD);
-        storedUsers = [{
-          id: 1,
-          username: SUPERADMIN_USERNAME,
-          passwordHash: adminHash,
-          role: 'superadmin',
-          disabled: false,
-          createdAt: new Date().toISOString()
-        }];
-        saveAuthUsers(storedUsers);
-      } else {
-        // Migration : s'assurer que le compte "admin" a le rôle superadmin et les champs requis
-        let needsSave = false;
-        storedUsers = storedUsers.map(u => {
-          const updates = {};
-          if (u.username === SUPERADMIN_USERNAME && u.role !== 'superadmin') {
-            updates.role = 'superadmin';
-            updates.disabled = false;
-            needsSave = true;
-          }
-          if (u.disabled === undefined) {
-            updates.disabled = false;
-            needsSave = true;
-          }
-          return Object.keys(updates).length > 0 ? { ...u, ...updates } : u;
-        });
-        if (needsSave) saveAuthUsers(storedUsers);
-      }
-
-      setUsers(storedUsers);
-      setAuthLogs(loadAuthLogs());
-
-      // Restaurer la session
-      const session = loadAuthSession();
-      if (session) {
-        const sessionUser = storedUsers.find(u => u.id === session.userId);
-        if (sessionUser && !sessionUser.disabled) {
-          setUser({ id: sessionUser.id, username: sessionUser.username, role: sessionUser.role });
-        } else {
-          clearAuthSession();
+      try {
+        const token = localStorage.getItem('authToken');
+        if (token) {
+          // Vérifier que le token est valide
+          const response = await api.getCurrentUser();
+          setUser(response.user);
         }
+      } catch (error) {
+        console.error('Erreur initialisation auth:', error);
+        // Token invalide ou expiré, on le supprime
+        api.setAuthToken(null);
+      } finally {
+        setLoading(false);
       }
-
-      setLoading(false);
     };
 
     init();
   }, []);
 
+  // Charger la liste des utilisateurs (seulement pour les admins)
+  const loadUsers = useCallback(async () => {
+    try {
+      const userList = await api.getUsers();
+      setUsers(userList);
+    } catch (error) {
+      console.error('Erreur chargement utilisateurs:', error);
+    }
+  }, []);
+
+  // Charger les utilisateurs quand un admin se connecte
+  useEffect(() => {
+    if (user && (user.role === 'admin' || user.role === 'superadmin')) {
+      loadUsers();
+    }
+  }, [user, loadUsers]);
+
+  /**
+   * Connexion
+   */
   const login = useCallback(async (username, password) => {
-    const foundUser = users.find(u => u.username === username);
-    if (!foundUser) {
-      addLog('login_failed', username, 'Utilisateur inconnu');
-      return { success: false, error: 'Identifiants incorrects' };
+    try {
+      const response = await api.login(username, password);
+      setUser(response.user);
+      return { success: true };
+    } catch (error) {
+      console.error('Erreur login:', error);
+      return { success: false, error: error.message || 'Identifiants incorrects' };
     }
+  }, []);
 
-    if (foundUser.disabled) {
-      addLog('login_failed', username, 'Compte désactivé');
-      return { success: false, error: 'Ce compte a été désactivé. Contactez un administrateur.' };
+  /**
+   * Déconnexion
+   */
+  const logout = useCallback(async () => {
+    try {
+      await api.logout();
+    } catch (error) {
+      console.error('Erreur logout:', error);
+    } finally {
+      setUser(null);
+      setUsers([]);
     }
+  }, []);
 
-    const valid = await verifyPassword(password, foundUser.passwordHash);
-    if (!valid) {
-      addLog('login_failed', username, 'Mot de passe incorrect');
-      return { success: false, error: 'Identifiants incorrects' };
-    }
-
-    const sessionUser = { id: foundUser.id, username: foundUser.username, role: foundUser.role };
-    setUser(sessionUser);
-    saveAuthSession({ userId: foundUser.id });
-    addLog('login_success', username);
-    return { success: true };
-  }, [users, addLog]);
-
-  const logout = useCallback(() => {
-    if (user) {
-      addLog('logout', user.username);
-    }
-    setUser(null);
-    clearAuthSession();
-  }, [user, addLog]);
-
+  /**
+   * Ajouter un utilisateur
+   */
   const addUser = useCallback(async (username, password, role = 'user') => {
-    if (users.find(u => u.username === username)) {
-      return { success: false, error: 'Ce nom d\'utilisateur existe déjà' };
+    try {
+      const newUser = await api.createUser({ username, password, role });
+      setUsers(prev => [...prev, newUser]);
+      return { success: true };
+    } catch (error) {
+      console.error('Erreur création utilisateur:', error);
+      return { success: false, error: error.message || 'Erreur lors de la création de l\'utilisateur' };
     }
+  }, []);
 
-    if (username === SUPERADMIN_USERNAME) {
-      return { success: false, error: 'Ce nom d\'utilisateur est réservé' };
+  /**
+   * Supprimer un utilisateur
+   */
+  const deleteUser = useCallback(async (userId) => {
+    try {
+      await api.deleteUser(userId);
+      setUsers(prev => prev.filter(u => u.id !== userId));
+      return { success: true };
+    } catch (error) {
+      console.error('Erreur suppression utilisateur:', error);
+      return { success: false, error: error.message || 'Erreur lors de la suppression de l\'utilisateur' };
     }
+  }, []);
 
-    if (role === 'admin' && user?.role !== 'superadmin') {
-      return { success: false, error: 'Seul le superadministrateur peut créer des administrateurs' };
+  /**
+   * Activer/Désactiver un utilisateur
+   * Note: Cette fonctionnalité nécessite d'être implémentée côté serveur
+   */
+  const toggleUserDisabled = useCallback(async (userId) => {
+    // TODO: Implémenter côté serveur
+    console.warn('toggleUserDisabled pas encore implémenté côté API');
+    return { success: false, error: 'Fonctionnalité pas encore disponible avec l\'API' };
+  }, []);
+
+  /**
+   * Changer le mot de passe
+   */
+  const changePassword = useCallback(async (userId, newPassword, currentPassword = null) => {
+    try {
+      await api.changePassword(userId, currentPassword, newPassword);
+      return { success: true };
+    } catch (error) {
+      console.error('Erreur changement mot de passe:', error);
+      return { success: false, error: error.message || 'Erreur lors du changement de mot de passe' };
     }
+  }, []);
 
-    const passwordHash = await hashPassword(password);
-    const newUser = {
-      id: Date.now(),
-      username,
-      passwordHash,
-      role,
-      disabled: false,
-      createdAt: new Date().toISOString()
-    };
-
-    const updatedUsers = [...users, newUser];
-    setUsers(updatedUsers);
-    saveAuthUsers(updatedUsers);
-    return { success: true };
-  }, [users, user]);
-
-  const deleteUser = useCallback((userId) => {
-    const userToDelete = users.find(u => u.id === userId);
-
-    if (userToDelete?.username === SUPERADMIN_USERNAME) {
-      return { success: false, error: 'Le compte superadministrateur ne peut pas être supprimé' };
-    }
-
-    if (userToDelete?.role === 'admin' && user?.role !== 'superadmin') {
-      return { success: false, error: 'Seul le superadministrateur peut supprimer un administrateur' };
-    }
-
-    const updatedUsers = users.filter(u => u.id !== userId);
-    setUsers(updatedUsers);
-    saveAuthUsers(updatedUsers);
-    return { success: true };
-  }, [users, user]);
-
-  const toggleUserDisabled = useCallback((userId) => {
-    const targetUser = users.find(u => u.id === userId);
-
-    if (targetUser?.username === SUPERADMIN_USERNAME) {
-      return { success: false, error: 'Le compte superadministrateur ne peut pas être désactivé' };
-    }
-
-    if (user?.role !== 'admin' && user?.role !== 'superadmin') {
-      return { success: false, error: 'Droits insuffisants' };
-    }
-
-    if (targetUser?.role === 'admin' && user?.role !== 'superadmin') {
-      return { success: false, error: 'Seul le superadministrateur peut désactiver un administrateur' };
-    }
-
-    const newDisabled = !targetUser.disabled;
-    const updatedUsers = users.map(u =>
-      u.id === userId ? { ...u, disabled: newDisabled } : u
-    );
-    setUsers(updatedUsers);
-    saveAuthUsers(updatedUsers);
-
-    if (newDisabled) {
-      addLog('account_disabled', targetUser.username, `Désactivé par ${user.username}`);
-    } else {
-      addLog('account_enabled', targetUser.username, `Réactivé par ${user.username}`);
-    }
-
-    return { success: true };
-  }, [users, user, addLog]);
-
-  const changePassword = useCallback(async (userId, newPassword) => {
-    const passwordHash = await hashPassword(newPassword);
-    const updatedUsers = users.map(u =>
-      u.id === userId ? { ...u, passwordHash } : u
-    );
-    setUsers(updatedUsers);
-    saveAuthUsers(updatedUsers);
-    return { success: true };
-  }, [users]);
-
+  /**
+   * Effacer les logs
+   * Note: Les logs seront gérés côté serveur dans une future version
+   */
   const clearLogs = useCallback(() => {
-    clearAuthLogs();
     setAuthLogs([]);
   }, []);
 

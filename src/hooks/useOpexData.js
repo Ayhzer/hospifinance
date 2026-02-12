@@ -1,80 +1,39 @@
 /**
- * Hook personnalisé pour la gestion des données OPEX
+ * Hook personnalisé pour la gestion des données OPEX avec API MongoDB
+ * Version migrée pour utiliser l'API Render au lieu de localStorage
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { saveOpexData, loadOpexData, hasOpexData, markAsInitialized } from '../services/storageService';
-import { validateOpexData, parseNumber, sanitizeString } from '../utils/validators';
-
-// Données par défaut
-const DEFAULT_OPEX_DATA = [
-  {
-    id: 1,
-    supplier: 'Oracle Health',
-    category: 'Logiciels',
-    budgetAnnuel: 500000,
-    depenseActuelle: 375000,
-    engagement: 50000,
-    notes: 'Contrat de maintenance annuel'
-  },
-  {
-    id: 2,
-    supplier: 'Microsoft',
-    category: 'Licences',
-    budgetAnnuel: 300000,
-    depenseActuelle: 280000,
-    engagement: 15000,
-    notes: 'Azure + Microsoft 365'
-  },
-  {
-    id: 3,
-    supplier: 'Dell Technologies',
-    category: 'Support matériel',
-    budgetAnnuel: 150000,
-    depenseActuelle: 95000,
-    engagement: 20000,
-    notes: 'Contrat support serveurs'
-  }
-];
+import * as api from '../services/apiService';
+import { validateOpexData } from '../utils/validators';
 
 export const useOpexData = () => {
   const [suppliers, setSuppliers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Chargement initial des données
+  // Chargement initial des données depuis l'API
   useEffect(() => {
-    const storedData = loadOpexData();
+    const loadData = async () => {
+      try {
+        const data = await api.getOpex();
+        setSuppliers(data || []);
+      } catch (err) {
+        console.error('Erreur chargement OPEX:', err);
+        setError(err.message);
+        setSuppliers([]);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    // Si des données existent, les charger (données de production)
-    if (storedData && storedData.length > 0) {
-      setSuppliers(storedData);
-    }
-    // Sinon, charger les données par défaut UNIQUEMENT si aucune donnée n'existe
-    else if (!hasOpexData()) {
-      setSuppliers(DEFAULT_OPEX_DATA);
-      saveOpexData(DEFAULT_OPEX_DATA);
-      markAsInitialized(); // Marquer comme initialisé
-    }
-    // Cas où les données existent mais sont vides (tableau vide)
-    else {
-      setSuppliers([]); // Respecter le choix de l'utilisateur d'avoir supprimé toutes les données
-    }
-
-    setLoading(false);
+    loadData();
   }, []);
-
-  // Sauvegarde automatique à chaque modification
-  useEffect(() => {
-    if (!loading) {
-      saveOpexData(suppliers); // Sauvegarder même si tableau vide (choix utilisateur)
-    }
-  }, [suppliers, loading]);
 
   /**
    * Ajoute un nouveau fournisseur
    */
-  const addSupplier = useCallback((supplierData) => {
+  const addSupplier = useCallback(async (supplierData) => {
     const validation = validateOpexData(supplierData);
 
     if (!validation.isValid) {
@@ -82,34 +41,22 @@ export const useOpexData = () => {
       return { success: false, errors: validation.errors };
     }
 
-    // Extraire les colonnes personnalisées
-    const customFields = {};
-    Object.keys(supplierData).forEach(key => {
-      if (key.startsWith('custom_')) {
-        customFields[key] = supplierData[key];
-      }
-    });
-
-    const newSupplier = {
-      id: Date.now() + Math.random(), // ID plus robuste
-      supplier: sanitizeString(supplierData.supplier),
-      category: sanitizeString(supplierData.category),
-      budgetAnnuel: parseNumber(supplierData.budgetAnnuel, 0),
-      depenseActuelle: parseNumber(supplierData.depenseActuelle, 0),
-      engagement: parseNumber(supplierData.engagement, 0),
-      notes: sanitizeString(supplierData.notes),
-      ...customFields // Inclure les colonnes personnalisées
-    };
-
-    setSuppliers(prev => [...prev, newSupplier]);
-    setError(null);
-    return { success: true, data: newSupplier };
+    try {
+      const newSupplier = await api.createOpex(supplierData);
+      setSuppliers(prev => [...prev, newSupplier]);
+      setError(null);
+      return { success: true, data: newSupplier };
+    } catch (err) {
+      console.error('Erreur ajout OPEX:', err);
+      setError(err.message);
+      return { success: false, errors: [err.message] };
+    }
   }, []);
 
   /**
    * Met à jour un fournisseur existant
    */
-  const updateSupplier = useCallback((id, supplierData) => {
+  const updateSupplier = useCallback(async (id, supplierData) => {
     const validation = validateOpexData(supplierData);
 
     if (!validation.isValid) {
@@ -117,44 +64,41 @@ export const useOpexData = () => {
       return { success: false, errors: validation.errors };
     }
 
-    // Extraire les colonnes personnalisées
-    const customFields = {};
-    Object.keys(supplierData).forEach(key => {
-      if (key.startsWith('custom_')) {
-        customFields[key] = supplierData[key];
-      }
-    });
-
-    const updatedSupplier = {
-      id,
-      supplier: sanitizeString(supplierData.supplier),
-      category: sanitizeString(supplierData.category),
-      budgetAnnuel: parseNumber(supplierData.budgetAnnuel, 0),
-      depenseActuelle: parseNumber(supplierData.depenseActuelle, 0),
-      engagement: parseNumber(supplierData.engagement, 0),
-      notes: sanitizeString(supplierData.notes),
-      ...customFields // Inclure les colonnes personnalisées
-    };
-
-    setSuppliers(prev => prev.map(s => s.id === id ? updatedSupplier : s));
-    setError(null);
-    return { success: true, data: updatedSupplier };
+    try {
+      const updatedSupplier = await api.updateOpex(id, supplierData);
+      setSuppliers(prev => prev.map(s => s.id === id ? updatedSupplier : s));
+      setError(null);
+      return { success: true, data: updatedSupplier };
+    } catch (err) {
+      console.error('Erreur mise à jour OPEX:', err);
+      setError(err.message);
+      return { success: false, errors: [err.message] };
+    }
   }, []);
 
   /**
    * Supprime un fournisseur
    */
-  const deleteSupplier = useCallback((id) => {
-    setSuppliers(prev => prev.filter(s => s.id !== id));
-    setError(null);
-    return { success: true };
+  const deleteSupplier = useCallback(async (id) => {
+    try {
+      await api.deleteOpex(id);
+      setSuppliers(prev => prev.filter(s => s.id !== id));
+      setError(null);
+      return { success: true };
+    } catch (err) {
+      console.error('Erreur suppression OPEX:', err);
+      setError(err.message);
+      return { success: false, errors: [err.message] };
+    }
   }, []);
 
   /**
    * Réinitialise aux données par défaut
+   * Note: Avec l'API, cela pourrait supprimer toutes les données
+   * À utiliser avec précaution
    */
-  const resetToDefaults = useCallback(() => {
-    setSuppliers(DEFAULT_OPEX_DATA);
+  const resetToDefaults = useCallback(async () => {
+    console.warn('resetToDefaults pas implémenté avec l\'API');
     setError(null);
   }, []);
 

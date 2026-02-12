@@ -1,9 +1,10 @@
 /**
- * Contexte de paramétrage - Couleurs, colonnes, règles de gestion
+ * Contexte de paramétrage avec API MongoDB
+ * Version migrée pour utiliser l'API Render au lieu de localStorage
  */
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { saveSettings, loadSettings } from '../services/storageService';
+import * as api from '../services/apiService';
 
 const SettingsContext = createContext(null);
 
@@ -64,25 +65,43 @@ const DEFAULT_SETTINGS = {
 export const SettingsProvider = ({ children }) => {
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  // Chargement initial
+  // Chargement initial depuis l'API
   useEffect(() => {
-    const stored = loadSettings();
-    if (stored) {
-      // Merge avec les défauts pour les nouvelles clés
-      setSettings(prev => ({
-        ...DEFAULT_SETTINGS,
-        ...stored,
-        colors: { ...DEFAULT_SETTINGS.colors, ...(stored.colors || {}) },
-        opexColumns: { ...DEFAULT_SETTINGS.opexColumns, ...(stored.opexColumns || {}) },
-        capexColumns: { ...DEFAULT_SETTINGS.capexColumns, ...(stored.capexColumns || {}) },
-        rules: { ...DEFAULT_SETTINGS.rules, ...(stored.rules || {}) },
-        customColumns: {
-          opex: stored.customColumns?.opex || [],
-          capex: stored.customColumns?.capex || []
+    const loadSettingsFromAPI = async () => {
+      try {
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+          // Pas de token, utiliser les settings par défaut
+          setLoading(false);
+          return;
         }
-      }));
-    }
+
+        const apiSettings = await api.getSettings();
+
+        // Merger avec les défauts pour les nouvelles clés
+        setSettings({
+          ...DEFAULT_SETTINGS,
+          ...apiSettings,
+          colors: { ...DEFAULT_SETTINGS.colors, ...(apiSettings.colors || {}) },
+          opexColumns: { ...DEFAULT_SETTINGS.opexColumns, ...(apiSettings.opexColumns || {}) },
+          capexColumns: { ...DEFAULT_SETTINGS.capexColumns, ...(apiSettings.capexColumns || {}) },
+          rules: { ...DEFAULT_SETTINGS.rules, ...(apiSettings.rules || {}) },
+          customColumns: {
+            opex: apiSettings.customColumns?.opex || [],
+            capex: apiSettings.customColumns?.capex || []
+          }
+        });
+      } catch (error) {
+        console.error('Erreur chargement settings:', error);
+        // En cas d'erreur, utiliser les settings par défaut
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadSettingsFromAPI();
   }, []);
 
   // Appliquer les couleurs CSS custom properties
@@ -96,13 +115,27 @@ export const SettingsProvider = ({ children }) => {
     root.style.setProperty('--color-accent', settings.colors.accent);
   }, [settings.colors]);
 
+  /**
+   * Sauvegarder les settings dans l'API
+   */
+  const saveSettingsToAPI = useCallback(async (updatedSettings) => {
+    try {
+      const token = localStorage.getItem('authToken');
+      if (token) {
+        await api.updateSettings(updatedSettings);
+      }
+    } catch (error) {
+      console.error('Erreur sauvegarde settings:', error);
+    }
+  }, []);
+
   const updateSettings = useCallback((newSettings) => {
     setSettings(prev => {
       const updated = { ...prev, ...newSettings };
-      saveSettings(updated);
+      saveSettingsToAPI(updated);
       return updated;
     });
-  }, []);
+  }, [saveSettingsToAPI]);
 
   const updateColors = useCallback((colorKey, value) => {
     setSettings(prev => {
@@ -110,10 +143,10 @@ export const SettingsProvider = ({ children }) => {
         ...prev,
         colors: { ...prev.colors, [colorKey]: value }
       };
-      saveSettings(updated);
+      saveSettingsToAPI(updated);
       return updated;
     });
-  }, []);
+  }, [saveSettingsToAPI]);
 
   const toggleOpexColumn = useCallback((columnKey) => {
     setSettings(prev => {
@@ -121,10 +154,10 @@ export const SettingsProvider = ({ children }) => {
         ...prev,
         opexColumns: { ...prev.opexColumns, [columnKey]: !prev.opexColumns[columnKey] }
       };
-      saveSettings(updated);
+      saveSettingsToAPI(updated);
       return updated;
     });
-  }, []);
+  }, [saveSettingsToAPI]);
 
   const toggleCapexColumn = useCallback((columnKey) => {
     setSettings(prev => {
@@ -132,10 +165,10 @@ export const SettingsProvider = ({ children }) => {
         ...prev,
         capexColumns: { ...prev.capexColumns, [columnKey]: !prev.capexColumns[columnKey] }
       };
-      saveSettings(updated);
+      saveSettingsToAPI(updated);
       return updated;
     });
-  }, []);
+  }, [saveSettingsToAPI]);
 
   const updateRules = useCallback((ruleKey, value) => {
     setSettings(prev => {
@@ -143,62 +176,63 @@ export const SettingsProvider = ({ children }) => {
         ...prev,
         rules: { ...prev.rules, [ruleKey]: value }
       };
-      saveSettings(updated);
+      saveSettingsToAPI(updated);
       return updated;
     });
-  }, []);
+  }, [saveSettingsToAPI]);
 
   const resetSettings = useCallback(() => {
     setSettings(DEFAULT_SETTINGS);
-    saveSettings(DEFAULT_SETTINGS);
+    saveSettingsToAPI(DEFAULT_SETTINGS);
+  }, [saveSettingsToAPI]);
+
+  /**
+   * Ajoute une colonne personnalisée via l'API
+   */
+  const addCustomColumn = useCallback(async (type, column) => {
+    try {
+      const updatedSettings = await api.addCustomColumn(type, column);
+      setSettings({
+        ...DEFAULT_SETTINGS,
+        ...updatedSettings,
+        colors: { ...DEFAULT_SETTINGS.colors, ...(updatedSettings.colors || {}) },
+        customColumns: {
+          opex: updatedSettings.customColumns?.opex || [],
+          capex: updatedSettings.customColumns?.capex || []
+        }
+      });
+    } catch (error) {
+      console.error('Erreur ajout colonne personnalisée:', error);
+    }
   }, []);
 
   /**
-   * Ajoute une colonne personnalisée
+   * Supprime une colonne personnalisée via l'API
    */
-  const addCustomColumn = useCallback((type, column) => {
-    setSettings(prev => {
-      const newColumn = {
-        id: `custom_${Date.now()}`,
-        name: column.name,
-        type: column.type || 'text',
-        required: column.required || false,
-        order: column.order || 100
-      };
-
-      const updated = {
-        ...prev,
+  const removeCustomColumn = useCallback(async (type, columnId) => {
+    try {
+      const updatedSettings = await api.removeCustomColumn(type, columnId);
+      setSettings({
+        ...DEFAULT_SETTINGS,
+        ...updatedSettings,
+        colors: { ...DEFAULT_SETTINGS.colors, ...(updatedSettings.colors || {}) },
         customColumns: {
-          ...prev.customColumns,
-          [type]: [...prev.customColumns[type], newColumn]
+          opex: updatedSettings.customColumns?.opex || [],
+          capex: updatedSettings.customColumns?.capex || []
         }
-      };
-      saveSettings(updated);
-      return updated;
-    });
-  }, []);
-
-  /**
-   * Supprime une colonne personnalisée
-   */
-  const removeCustomColumn = useCallback((type, columnId) => {
-    setSettings(prev => {
-      const updated = {
-        ...prev,
-        customColumns: {
-          ...prev.customColumns,
-          [type]: prev.customColumns[type].filter(col => col.id !== columnId)
-        }
-      };
-      saveSettings(updated);
-      return updated;
-    });
+      });
+    } catch (error) {
+      console.error('Erreur suppression colonne personnalisée:', error);
+    }
   }, []);
 
   /**
    * Met à jour une colonne personnalisée
+   * Note: Cette fonctionnalité nécessite d'être implémentée côté serveur
    */
   const updateCustomColumn = useCallback((type, columnId, updates) => {
+    // TODO: Implémenter côté serveur
+    console.warn('updateCustomColumn pas encore implémenté côté API');
     setSettings(prev => {
       const updated = {
         ...prev,
@@ -209,10 +243,10 @@ export const SettingsProvider = ({ children }) => {
           )
         }
       };
-      saveSettings(updated);
+      saveSettingsToAPI(updated);
       return updated;
     });
-  }, []);
+  }, [saveSettingsToAPI]);
 
   return (
     <SettingsContext.Provider value={{
@@ -228,7 +262,8 @@ export const SettingsProvider = ({ children }) => {
       addCustomColumn,
       removeCustomColumn,
       updateCustomColumn,
-      DEFAULT_SETTINGS
+      DEFAULT_SETTINGS,
+      loading
     }}>
       {children}
     </SettingsContext.Provider>

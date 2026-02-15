@@ -1,142 +1,191 @@
 /**
- * Contexte d'authentification avec API MongoDB
- * Version migrée pour utiliser l'API Render au lieu de localStorage
+ * Contexte d'authentification - dual-mode LocalStorage / API
+ * LocalStorage si VITE_API_URL absent, API sinon
  */
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import * as api from '../services/apiService';
+import {
+  saveAuthUsers, loadAuthUsers,
+  saveAuthSession, loadAuthSession, clearAuthSession,
+  saveAuthLog, loadAuthLogs, clearAuthLogs
+} from '../services/storageService';
+
+const USE_API = !!import.meta.env.VITE_API_URL;
 
 const AuthContext = createContext(null);
+
+// ---- Mode LocalStorage : utilisateurs par défaut ----
+const DEFAULT_USERS = [
+  { id: 1, username: 'admin', password: btoa('Admin2024!'), role: 'superadmin', disabled: false },
+  { id: 2, username: 'user', password: btoa('User2024!'), role: 'user', disabled: false }
+];
+
+const initUsers = () => {
+  const stored = loadAuthUsers();
+  if (stored && stored.length > 0) return stored;
+  saveAuthUsers(DEFAULT_USERS);
+  return DEFAULT_USERS;
+};
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [users, setUsers] = useState([]);
-  const [authLogs, setAuthLogs] = useState([]); // TODO: implémenter les logs côté serveur
+  const [authLogs, setAuthLogs] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Initialisation : vérifier si un token existe et récupérer l'utilisateur
   useEffect(() => {
     const init = async () => {
-      try {
-        const token = localStorage.getItem('authToken');
-        if (token) {
-          // Vérifier que le token est valide
-          const response = await api.getCurrentUser();
-          setUser(response.user);
+      if (USE_API) {
+        try {
+          const token = localStorage.getItem('authToken');
+          if (token) {
+            const response = await api.getCurrentUser();
+            setUser(response.user);
+          }
+        } catch {
+          api.setAuthToken(null);
+        } finally {
+          setLoading(false);
         }
-      } catch (error) {
-        console.error('Erreur initialisation auth:', error);
-        // Token invalide ou expiré, on le supprime
-        api.setAuthToken(null);
-      } finally {
+      } else {
+        const allUsers = initUsers();
+        setUsers(allUsers);
+        setAuthLogs(loadAuthLogs());
+        const session = loadAuthSession();
+        if (session) {
+          const found = allUsers.find(u => u.id === session.userId && !u.disabled);
+          if (found) setUser({ id: found.id, username: found.username, role: found.role });
+          else clearAuthSession();
+        }
         setLoading(false);
       }
     };
-
     init();
   }, []);
 
-  // Charger la liste des utilisateurs (seulement pour les admins)
+  // Charger la liste des utilisateurs (mode API, admins uniquement)
   const loadUsers = useCallback(async () => {
+    if (!USE_API) return;
     try {
       const userList = await api.getUsers();
       setUsers(userList);
-    } catch (error) {
-      console.error('Erreur chargement utilisateurs:', error);
-    }
+    } catch { /* silence */ }
   }, []);
 
-  // Charger les utilisateurs quand un admin se connecte
   useEffect(() => {
-    if (user && (user.role === 'admin' || user.role === 'superadmin')) {
+    if (USE_API && user && (user.role === 'admin' || user.role === 'superadmin')) {
       loadUsers();
     }
   }, [user, loadUsers]);
 
-  /**
-   * Connexion
-   */
   const login = useCallback(async (username, password) => {
-    try {
-      const response = await api.login(username, password);
-      setUser(response.user);
+    if (USE_API) {
+      try {
+        const response = await api.login(username, password);
+        setUser(response.user);
+        return { success: true };
+      } catch (err) {
+        return { success: false, error: err.message || 'Identifiants incorrects' };
+      }
+    } else {
+      const allUsers = loadAuthUsers() || [];
+      const found = allUsers.find(u => u.username === username && !u.disabled);
+      if (!found || btoa(password) !== found.password) {
+        saveAuthLog({ id: Date.now(), type: 'login_failed', username, timestamp: new Date().toISOString(), detail: 'Identifiants incorrects' });
+        setAuthLogs(loadAuthLogs());
+        return { success: false, error: 'Identifiants incorrects' };
+      }
+      setUser({ id: found.id, username: found.username, role: found.role });
+      saveAuthSession({ userId: found.id });
+      saveAuthLog({ id: Date.now(), type: 'login_success', username, timestamp: new Date().toISOString() });
+      setAuthLogs(loadAuthLogs());
       return { success: true };
-    } catch (error) {
-      console.error('Erreur login:', error);
-      return { success: false, error: error.message || 'Identifiants incorrects' };
     }
   }, []);
 
-  /**
-   * Déconnexion
-   */
   const logout = useCallback(async () => {
-    try {
-      await api.logout();
-    } catch (error) {
-      console.error('Erreur logout:', error);
-    } finally {
-      setUser(null);
-      setUsers([]);
+    if (USE_API) {
+      try { await api.logout(); } catch { /* silence */ }
+    } else if (user) {
+      saveAuthLog({ id: Date.now(), type: 'logout', username: user.username, timestamp: new Date().toISOString() });
+      setAuthLogs(loadAuthLogs());
+      clearAuthSession();
     }
-  }, []);
+    setUser(null);
+    setUsers([]);
+  }, [user]);
 
-  /**
-   * Ajouter un utilisateur
-   */
   const addUser = useCallback(async (username, password, role = 'user') => {
-    try {
-      const newUser = await api.createUser({ username, password, role });
-      setUsers(prev => [...prev, newUser]);
+    if (USE_API) {
+      try {
+        const newUser = await api.createUser({ username, password, role });
+        setUsers(prev => [...prev, newUser]);
+        return { success: true };
+      } catch (err) {
+        return { success: false, error: err.message };
+      }
+    } else {
+      const allUsers = loadAuthUsers() || [];
+      if (allUsers.find(u => u.username === username)) return { success: false, error: 'Ce nom d\'utilisateur existe déjà' };
+      const newUser = { id: Date.now(), username, password: btoa(password), role, disabled: false };
+      const updated = [...allUsers, newUser];
+      saveAuthUsers(updated);
+      setUsers(updated);
       return { success: true };
-    } catch (error) {
-      console.error('Erreur création utilisateur:', error);
-      return { success: false, error: error.message || 'Erreur lors de la création de l\'utilisateur' };
     }
   }, []);
 
-  /**
-   * Supprimer un utilisateur
-   */
   const deleteUser = useCallback(async (userId) => {
-    try {
-      await api.deleteUser(userId);
-      setUsers(prev => prev.filter(u => u.id !== userId));
+    if (USE_API) {
+      try {
+        await api.deleteUser(userId);
+        setUsers(prev => prev.filter(u => u.id !== userId));
+        return { success: true };
+      } catch (err) {
+        return { success: false, error: err.message };
+      }
+    } else {
+      const updated = (loadAuthUsers() || []).filter(u => u.id !== userId);
+      saveAuthUsers(updated);
+      setUsers(updated);
       return { success: true };
-    } catch (error) {
-      console.error('Erreur suppression utilisateur:', error);
-      return { success: false, error: error.message || 'Erreur lors de la suppression de l\'utilisateur' };
     }
   }, []);
 
-  /**
-   * Activer/Désactiver un utilisateur
-   * Note: Cette fonctionnalité nécessite d'être implémentée côté serveur
-   */
   const toggleUserDisabled = useCallback(async (userId) => {
-    // TODO: Implémenter côté serveur
-    console.warn('toggleUserDisabled pas encore implémenté côté API');
-    return { success: false, error: 'Fonctionnalité pas encore disponible avec l\'API' };
-  }, []);
-
-  /**
-   * Changer le mot de passe
-   */
-  const changePassword = useCallback(async (userId, newPassword, currentPassword = null) => {
-    try {
-      await api.changePassword(userId, currentPassword, newPassword);
+    if (USE_API) {
+      return { success: false, error: 'Fonctionnalité pas encore disponible avec l\'API' };
+    } else {
+      const updated = (loadAuthUsers() || []).map(u => u.id === userId ? { ...u, disabled: !u.disabled } : u);
+      saveAuthUsers(updated);
+      setUsers(updated);
       return { success: true };
-    } catch (error) {
-      console.error('Erreur changement mot de passe:', error);
-      return { success: false, error: error.message || 'Erreur lors du changement de mot de passe' };
     }
   }, []);
 
-  /**
-   * Effacer les logs
-   * Note: Les logs seront gérés côté serveur dans une future version
-   */
+  const changePassword = useCallback(async (userId, newPassword, currentPassword = null) => {
+    if (USE_API) {
+      try {
+        await api.changePassword(userId, currentPassword, newPassword);
+        return { success: true };
+      } catch (err) {
+        return { success: false, error: err.message };
+      }
+    } else {
+      const allUsers = loadAuthUsers() || [];
+      const found = allUsers.find(u => u.id === userId);
+      if (!found) return { success: false, error: 'Utilisateur introuvable' };
+      if (currentPassword && btoa(currentPassword) !== found.password) return { success: false, error: 'Mot de passe actuel incorrect' };
+      const updated = allUsers.map(u => u.id === userId ? { ...u, password: btoa(newPassword) } : u);
+      saveAuthUsers(updated);
+      setUsers(updated);
+      return { success: true };
+    }
+  }, []);
+
   const clearLogs = useCallback(() => {
+    clearAuthLogs();
     setAuthLogs([]);
   }, []);
 
@@ -145,19 +194,10 @@ export const AuthProvider = ({ children }) => {
 
   return (
     <AuthContext.Provider value={{
-      user,
-      users,
-      authLogs,
-      loading,
-      login,
-      logout,
-      addUser,
-      deleteUser,
-      toggleUserDisabled,
-      changePassword,
-      clearLogs,
-      isAdmin,
-      isSuperAdmin
+      user, users, authLogs, loading,
+      login, logout, addUser, deleteUser,
+      toggleUserDisabled, changePassword, clearLogs,
+      isAdmin, isSuperAdmin
     }}>
       {children}
     </AuthContext.Provider>
@@ -166,8 +206,6 @@ export const AuthProvider = ({ children }) => {
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth doit être utilisé dans un AuthProvider');
-  }
+  if (!context) throw new Error('useAuth doit être utilisé dans un AuthProvider');
   return context;
 };

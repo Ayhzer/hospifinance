@@ -1,126 +1,161 @@
 /**
- * Hook personnalisé pour la gestion des données OPEX avec API MongoDB
- * Version migrée pour utiliser l'API Render au lieu de localStorage
+ * Hook OPEX - dual-mode LocalStorage / API
+ * LocalStorage si VITE_API_URL absent, API sinon
  */
 
 import { useState, useEffect, useCallback } from 'react';
+
+const USE_API = !!import.meta.env.VITE_API_URL;
+
+// ---- Imports conditionnels ----
+import { saveOpexData, loadOpexData, hasOpexData, markAsInitialized } from '../services/storageService';
+import { validateOpexData, parseNumber, sanitizeString } from '../utils/validators';
 import * as api from '../services/apiService';
-import { validateOpexData } from '../utils/validators';
+
+const DEFAULT_OPEX_DATA = [
+  { id: 1, supplier: 'Oracle Health', category: 'Logiciels', budgetAnnuel: 500000, depenseActuelle: 375000, engagement: 50000, notes: 'Contrat de maintenance annuel' },
+  { id: 2, supplier: 'Microsoft', category: 'Licences', budgetAnnuel: 300000, depenseActuelle: 280000, engagement: 15000, notes: 'Azure + Microsoft 365' },
+  { id: 3, supplier: 'Dell Technologies', category: 'Support matériel', budgetAnnuel: 150000, depenseActuelle: 95000, engagement: 20000, notes: 'Contrat support serveurs' }
+];
 
 export const useOpexData = () => {
   const [suppliers, setSuppliers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Chargement initial des données depuis l'API
+  // ---- Chargement initial ----
   useEffect(() => {
     const loadData = async () => {
-      try {
-        const token = localStorage.getItem('authToken');
-        if (!token) {
-          // Pas de token, mode non connecté
+      if (USE_API) {
+        try {
+          const token = localStorage.getItem('authToken');
+          if (!token) { setLoading(false); return; }
+          const data = await api.getOpex();
+          setSuppliers(data || []);
+        } catch (err) {
+          if (!err.message?.includes('Token') && !err.message?.includes('401')) {
+            setError(err.message);
+          }
           setSuppliers([]);
+        } finally {
           setLoading(false);
-          return;
         }
-
-        const data = await api.getOpex();
-        setSuppliers(data || []);
-      } catch (err) {
-        // Ne logger l'erreur que si ce n'est pas un problème d'authentification
-        if (err.message && !err.message.includes('Token') && !err.message.includes('401')) {
-          console.error('Erreur chargement OPEX:', err);
-          setError(err.message);
+      } else {
+        const storedData = loadOpexData();
+        if (storedData && storedData.length > 0) {
+          setSuppliers(storedData);
+        } else if (!hasOpexData()) {
+          setSuppliers(DEFAULT_OPEX_DATA);
+          saveOpexData(DEFAULT_OPEX_DATA);
+          markAsInitialized();
+        } else {
+          setSuppliers([]);
         }
-        setSuppliers([]);
-      } finally {
         setLoading(false);
       }
     };
-
     loadData();
   }, []);
 
-  /**
-   * Ajoute un nouveau fournisseur
-   */
+  // ---- Sauvegarde auto (mode LocalStorage uniquement) ----
+  useEffect(() => {
+    if (!USE_API && !loading) saveOpexData(suppliers);
+  }, [suppliers, loading]);
+
   const addSupplier = useCallback(async (supplierData) => {
     const validation = validateOpexData(supplierData);
-
     if (!validation.isValid) {
       setError(validation.errors.join(', '));
       return { success: false, errors: validation.errors };
     }
 
-    try {
-      const newSupplier = await api.createOpex(supplierData);
+    if (USE_API) {
+      try {
+        const newSupplier = await api.createOpex(supplierData);
+        setSuppliers(prev => [...prev, newSupplier]);
+        setError(null);
+        return { success: true, data: newSupplier };
+      } catch (err) {
+        setError(err.message);
+        return { success: false, errors: [err.message] };
+      }
+    } else {
+      const customFields = {};
+      Object.keys(supplierData).forEach(k => { if (k.startsWith('custom_')) customFields[k] = supplierData[k]; });
+      const newSupplier = {
+        id: Date.now() + Math.random(),
+        supplier: sanitizeString(supplierData.supplier),
+        category: sanitizeString(supplierData.category),
+        budgetAnnuel: parseNumber(supplierData.budgetAnnuel, 0),
+        depenseActuelle: parseNumber(supplierData.depenseActuelle, 0),
+        engagement: parseNumber(supplierData.engagement, 0),
+        notes: sanitizeString(supplierData.notes),
+        ...customFields
+      };
       setSuppliers(prev => [...prev, newSupplier]);
       setError(null);
       return { success: true, data: newSupplier };
-    } catch (err) {
-      console.error('Erreur ajout OPEX:', err);
-      setError(err.message);
-      return { success: false, errors: [err.message] };
     }
   }, []);
 
-  /**
-   * Met à jour un fournisseur existant
-   */
   const updateSupplier = useCallback(async (id, supplierData) => {
     const validation = validateOpexData(supplierData);
-
     if (!validation.isValid) {
       setError(validation.errors.join(', '));
       return { success: false, errors: validation.errors };
     }
 
-    try {
-      const updatedSupplier = await api.updateOpex(id, supplierData);
-      setSuppliers(prev => prev.map(s => s.id === id ? updatedSupplier : s));
+    if (USE_API) {
+      try {
+        const updated = await api.updateOpex(id, supplierData);
+        setSuppliers(prev => prev.map(s => s.id === id ? updated : s));
+        setError(null);
+        return { success: true, data: updated };
+      } catch (err) {
+        setError(err.message);
+        return { success: false, errors: [err.message] };
+      }
+    } else {
+      const customFields = {};
+      Object.keys(supplierData).forEach(k => { if (k.startsWith('custom_')) customFields[k] = supplierData[k]; });
+      const updated = {
+        id,
+        supplier: sanitizeString(supplierData.supplier),
+        category: sanitizeString(supplierData.category),
+        budgetAnnuel: parseNumber(supplierData.budgetAnnuel, 0),
+        depenseActuelle: parseNumber(supplierData.depenseActuelle, 0),
+        engagement: parseNumber(supplierData.engagement, 0),
+        notes: sanitizeString(supplierData.notes),
+        ...customFields
+      };
+      setSuppliers(prev => prev.map(s => s.id === id ? updated : s));
       setError(null);
-      return { success: true, data: updatedSupplier };
-    } catch (err) {
-      console.error('Erreur mise à jour OPEX:', err);
-      setError(err.message);
-      return { success: false, errors: [err.message] };
+      return { success: true, data: updated };
     }
   }, []);
 
-  /**
-   * Supprime un fournisseur
-   */
   const deleteSupplier = useCallback(async (id) => {
-    try {
-      await api.deleteOpex(id);
+    if (USE_API) {
+      try {
+        await api.deleteOpex(id);
+        setSuppliers(prev => prev.filter(s => s.id !== id));
+        setError(null);
+        return { success: true };
+      } catch (err) {
+        setError(err.message);
+        return { success: false, errors: [err.message] };
+      }
+    } else {
       setSuppliers(prev => prev.filter(s => s.id !== id));
       setError(null);
       return { success: true };
-    } catch (err) {
-      console.error('Erreur suppression OPEX:', err);
-      setError(err.message);
-      return { success: false, errors: [err.message] };
     }
   }, []);
 
-  /**
-   * Réinitialise aux données par défaut
-   * Note: Avec l'API, cela pourrait supprimer toutes les données
-   * À utiliser avec précaution
-   */
-  const resetToDefaults = useCallback(async () => {
-    console.warn('resetToDefaults pas implémenté avec l\'API');
+  const resetToDefaults = useCallback(() => {
+    if (!USE_API) setSuppliers(DEFAULT_OPEX_DATA);
     setError(null);
   }, []);
 
-  return {
-    suppliers,
-    loading,
-    error,
-    addSupplier,
-    updateSupplier,
-    deleteSupplier,
-    resetToDefaults,
-    setError
-  };
+  return { suppliers, loading, error, addSupplier, updateSupplier, deleteSupplier, resetToDefaults, setError };
 };

@@ -1,153 +1,179 @@
 /**
- * Hook personnalisé pour la gestion des données CAPEX avec API MongoDB
- * Version migrée pour utiliser l'API Render au lieu de localStorage
+ * Hook CAPEX - dual-mode LocalStorage / API
+ * LocalStorage si VITE_API_URL absent, API sinon
  */
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+
+const USE_API = !!import.meta.env.VITE_API_URL;
+
+import { saveCapexData, loadCapexData, hasCapexData, markAsInitialized } from '../services/storageService';
+import { validateCapexData, parseNumber, sanitizeString } from '../utils/validators';
 import * as api from '../services/apiService';
-import { validateCapexData } from '../utils/validators';
-import { calculateAvailable, calculateUsageRate } from '../utils/calculations';
+
+const DEFAULT_CAPEX_DATA = [
+  { id: 1, enveloppe: 'Infrastructure', project: 'Renouvellement Datacenter', budgetTotal: 2000000, depense: 1200000, engagement: 300000, dateDebut: '2024-01-01', dateFin: '2024-12-31', status: 'En cours', notes: 'Phase 2 en cours' },
+  { id: 2, enveloppe: 'Poste de travail', project: 'Déploiement VDI', budgetTotal: 800000, depense: 650000, engagement: 100000, dateDebut: '2024-03-01', dateFin: '2024-11-30', status: 'En cours', notes: '85% des postes déployés' },
+  { id: 3, enveloppe: 'Cybersécurité', project: 'Cybersécurité - SIEM', budgetTotal: 500000, depense: 500000, engagement: 0, dateDebut: '2023-09-01', dateFin: '2024-02-28', status: 'Terminé', notes: 'Projet finalisé' }
+];
 
 export const useCapexData = () => {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Chargement initial des données depuis l'API
   useEffect(() => {
     const loadData = async () => {
-      try {
-        const token = localStorage.getItem('authToken');
-        if (!token) {
-          // Pas de token, mode non connecté
+      if (USE_API) {
+        try {
+          const token = localStorage.getItem('authToken');
+          if (!token) { setLoading(false); return; }
+          const data = await api.getCapex();
+          setProjects(data || []);
+        } catch (err) {
+          if (!err.message?.includes('Token') && !err.message?.includes('401')) {
+            setError(err.message);
+          }
           setProjects([]);
+        } finally {
           setLoading(false);
-          return;
         }
-
-        const data = await api.getCapex();
-        setProjects(data || []);
-      } catch (err) {
-        // Ne logger l'erreur que si ce n'est pas un problème d'authentification
-        if (err.message && !err.message.includes('Token') && !err.message.includes('401')) {
-          console.error('Erreur chargement CAPEX:', err);
-          setError(err.message);
+      } else {
+        const storedData = loadCapexData();
+        if (storedData && storedData.length > 0) {
+          setProjects(storedData);
+        } else if (!hasCapexData()) {
+          setProjects(DEFAULT_CAPEX_DATA);
+          saveCapexData(DEFAULT_CAPEX_DATA);
+          markAsInitialized();
+        } else {
+          setProjects([]);
         }
-        setProjects([]);
-      } finally {
         setLoading(false);
       }
     };
-
     loadData();
   }, []);
 
-  /**
-   * Ajoute un nouveau projet
-   */
+  useEffect(() => {
+    if (!USE_API && !loading) saveCapexData(projects);
+  }, [projects, loading]);
+
   const addProject = useCallback(async (projectData) => {
     const validation = validateCapexData(projectData);
-
     if (!validation.isValid) {
       setError(validation.errors.join(', '));
       return { success: false, errors: validation.errors };
     }
 
-    try {
-      const newProject = await api.createCapex(projectData);
+    if (USE_API) {
+      try {
+        const newProject = await api.createCapex(projectData);
+        setProjects(prev => [...prev, newProject]);
+        setError(null);
+        return { success: true, data: newProject };
+      } catch (err) {
+        setError(err.message);
+        return { success: false, errors: [err.message] };
+      }
+    } else {
+      const customFields = {};
+      Object.keys(projectData).forEach(k => { if (k.startsWith('custom_')) customFields[k] = projectData[k]; });
+      const newProject = {
+        id: Date.now() + Math.random(),
+        enveloppe: projectData.enveloppe || 'Autre',
+        project: sanitizeString(projectData.project),
+        budgetTotal: parseNumber(projectData.budgetTotal, 0),
+        depense: parseNumber(projectData.depense, 0),
+        engagement: parseNumber(projectData.engagement, 0),
+        dateDebut: projectData.dateDebut || '',
+        dateFin: projectData.dateFin || '',
+        status: projectData.status || 'Planifié',
+        notes: sanitizeString(projectData.notes),
+        ...customFields
+      };
       setProjects(prev => [...prev, newProject]);
       setError(null);
       return { success: true, data: newProject };
-    } catch (err) {
-      console.error('Erreur ajout CAPEX:', err);
-      setError(err.message);
-      return { success: false, errors: [err.message] };
     }
   }, []);
 
-  /**
-   * Met à jour un projet existant
-   */
   const updateProject = useCallback(async (id, projectData) => {
     const validation = validateCapexData(projectData);
-
     if (!validation.isValid) {
       setError(validation.errors.join(', '));
       return { success: false, errors: validation.errors };
     }
 
-    try {
-      const updatedProject = await api.updateCapex(id, projectData);
-      setProjects(prev => prev.map(p => p.id === id ? updatedProject : p));
+    if (USE_API) {
+      try {
+        const updated = await api.updateCapex(id, projectData);
+        setProjects(prev => prev.map(p => p.id === id ? updated : p));
+        setError(null);
+        return { success: true, data: updated };
+      } catch (err) {
+        setError(err.message);
+        return { success: false, errors: [err.message] };
+      }
+    } else {
+      const customFields = {};
+      Object.keys(projectData).forEach(k => { if (k.startsWith('custom_')) customFields[k] = projectData[k]; });
+      const updated = {
+        id,
+        enveloppe: projectData.enveloppe || 'Autre',
+        project: sanitizeString(projectData.project),
+        budgetTotal: parseNumber(projectData.budgetTotal, 0),
+        depense: parseNumber(projectData.depense, 0),
+        engagement: parseNumber(projectData.engagement, 0),
+        dateDebut: projectData.dateDebut || '',
+        dateFin: projectData.dateFin || '',
+        status: projectData.status || 'Planifié',
+        notes: sanitizeString(projectData.notes),
+        ...customFields
+      };
+      setProjects(prev => prev.map(p => p.id === id ? updated : p));
       setError(null);
-      return { success: true, data: updatedProject };
-    } catch (err) {
-      console.error('Erreur mise à jour CAPEX:', err);
-      setError(err.message);
-      return { success: false, errors: [err.message] };
+      return { success: true, data: updated };
     }
   }, []);
 
-  /**
-   * Supprime un projet
-   */
   const deleteProject = useCallback(async (id) => {
-    try {
-      await api.deleteCapex(id);
+    if (USE_API) {
+      try {
+        await api.deleteCapex(id);
+        setProjects(prev => prev.filter(p => p.id !== id));
+        setError(null);
+        return { success: true };
+      } catch (err) {
+        setError(err.message);
+        return { success: false, errors: [err.message] };
+      }
+    } else {
       setProjects(prev => prev.filter(p => p.id !== id));
       setError(null);
       return { success: true };
-    } catch (err) {
-      console.error('Erreur suppression CAPEX:', err);
-      setError(err.message);
-      return { success: false, errors: [err.message] };
     }
   }, []);
 
-  /**
-   * Réinitialise aux données par défaut
-   * Note: Avec l'API, cela pourrait supprimer toutes les données
-   * À utiliser avec précaution
-   */
-  const resetToDefaults = useCallback(async () => {
-    console.warn('resetToDefaults pas implémenté avec l\'API');
+  const resetToDefaults = useCallback(() => {
+    if (!USE_API) setProjects(DEFAULT_CAPEX_DATA);
     setError(null);
   }, []);
 
-  /**
-   * Calcule le total par enveloppe budgétaire
-   */
   const calculateEnveloppeTotal = useCallback((enveloppe) => {
-    const enveloppeProjects = projects.filter(p => p.enveloppe === enveloppe);
-
-    return enveloppeProjects.reduce(
-      (acc, project) => ({
-        budget: acc.budget + (project.budgetTotal || 0),
-        depense: acc.depense + (project.depense || 0),
-        engagement: acc.engagement + (project.engagement || 0)
-      }),
-      { budget: 0, depense: 0, engagement: 0 }
-    );
+    return projects
+      .filter(p => p.enveloppe === enveloppe)
+      .reduce((acc, p) => ({
+        budget: acc.budget + (p.budgetTotal || 0),
+        depense: acc.depense + (p.depense || 0),
+        engagement: acc.engagement + (p.engagement || 0),
+        count: acc.count + 1
+      }), { budget: 0, depense: 0, engagement: 0, count: 0 });
   }, [projects]);
 
-  /**
-   * Récupère la liste des enveloppes utilisées
-   */
   const getUsedEnveloppes = useCallback(() => {
-    const enveloppes = new Set(projects.map(p => p.enveloppe || 'Autre'));
-    return Array.from(enveloppes).sort();
+    return Array.from(new Set(projects.map(p => p.enveloppe).filter(Boolean))).sort();
   }, [projects]);
 
-  return {
-    projects,
-    loading,
-    error,
-    addProject,
-    updateProject,
-    deleteProject,
-    resetToDefaults,
-    setError,
-    calculateEnveloppeTotal,
-    getUsedEnveloppes
-  };
+  return { projects, loading, error, addProject, updateProject, deleteProject, resetToDefaults, setError, calculateEnveloppeTotal, getUsedEnveloppes };
 };

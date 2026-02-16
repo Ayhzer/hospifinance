@@ -6,6 +6,7 @@ import React, { useState, useCallback } from 'react';
 import { Edit2, Trash2, Download, Plus, FileUp, FileDown } from 'lucide-react';
 import { formatCurrency } from '../../utils/formatters';
 import { calculateAvailable, calculateUsageRate } from '../../utils/calculations';
+import { computeOrderImpactByParent } from '../../utils/orderCalculations';
 import { exportToCSV, exportToJSON, exportOpexTemplate } from '../../utils/exportUtils';
 import { importOpexFromCSV } from '../../utils/importUtils';
 import { usePermissions } from '../../contexts/PermissionsContext';
@@ -15,10 +16,13 @@ import { ProgressBar } from '../common/ProgressBar';
 import { ConfirmDialog } from '../common/ConfirmDialog';
 import ImportModal from '../common/ImportModal';
 
-export const OpexTable = ({ suppliers, totals, onEdit, onDelete, onAdd, onImport, columnVisibility = {} }) => {
+export const OpexTable = ({ suppliers, totals, orders = [], onEdit, onDelete, onAdd, onImport, columnVisibility = {} }) => {
   const col = (key) => (columnVisibility || {})[key] !== false;
   const permissions = usePermissions();
   const { settings } = useSettings();
+
+  // Impact des commandes par fournisseur
+  const orderImpactBySupplier = computeOrderImpactByParent(orders);
   const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, supplier: null });
   const [importModalOpen, setImportModalOpen] = useState(false);
 
@@ -134,7 +138,7 @@ export const OpexTable = ({ suppliers, totals, onEdit, onDelete, onAdd, onImport
         <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 col-span-2 sm:col-span-1">
           <div className="text-xs text-gray-600 font-medium mb-1">Utilisation</div>
           <div className="text-base sm:text-lg font-bold text-gray-800 mb-1">{totals.tauxUtilisation.toFixed(1)}%</div>
-          <ProgressBar value={totals.tauxUtilisation} showLabel={false} size="sm" />
+          <ProgressBar value={totals.tauxUtilisation} showLabel={false} size="sm" warningThreshold={settings.rules.warningThreshold} criticalThreshold={settings.rules.criticalThreshold} />
         </div>
       </div>
 
@@ -144,142 +148,96 @@ export const OpexTable = ({ suppliers, totals, onEdit, onDelete, onAdd, onImport
         <table className="w-full min-w-[800px]">
           <thead>
             <tr className="bg-gray-50 border-b">
-              <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs sm:text-sm font-semibold text-gray-700 whitespace-nowrap">
-                Fournisseur
-              </th>
-              <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs sm:text-sm font-semibold text-gray-700 whitespace-nowrap">
-                Catégorie
-              </th>
-              <th className="px-2 sm:px-4 py-2 sm:py-3 text-right text-xs sm:text-sm font-semibold text-gray-700 whitespace-nowrap">
-                Budget annuel
-              </th>
-              <th className="px-2 sm:px-4 py-2 sm:py-3 text-right text-xs sm:text-sm font-semibold text-gray-700 whitespace-nowrap">
-                Dépensé
-              </th>
-              <th className="px-2 sm:px-4 py-2 sm:py-3 text-right text-xs sm:text-sm font-semibold text-gray-700 whitespace-nowrap">
-                Engagé
-              </th>
-              <th className="px-2 sm:px-4 py-2 sm:py-3 text-right text-xs sm:text-sm font-semibold text-gray-700 whitespace-nowrap">
-                Disponible
-              </th>
-              <th className="px-2 sm:px-4 py-2 sm:py-3 text-center text-xs sm:text-sm font-semibold text-gray-700 whitespace-nowrap">
-                Utilisation
-              </th>
-              <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs sm:text-sm font-semibold text-gray-700 whitespace-nowrap">
-                Notes
-              </th>
+              {col('supplier') && <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs sm:text-sm font-semibold text-gray-700 whitespace-nowrap">Fournisseur</th>}
+              {col('category') && <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs sm:text-sm font-semibold text-gray-700 whitespace-nowrap">Catégorie</th>}
+              {col('budgetAnnuel') && <th className="px-2 sm:px-4 py-2 sm:py-3 text-right text-xs sm:text-sm font-semibold text-gray-700 whitespace-nowrap">Budget annuel</th>}
+              {col('depenseActuelle') && <th className="px-2 sm:px-4 py-2 sm:py-3 text-right text-xs sm:text-sm font-semibold text-gray-700 whitespace-nowrap">Dépensé</th>}
+              {col('engagement') && <th className="px-2 sm:px-4 py-2 sm:py-3 text-right text-xs sm:text-sm font-semibold text-gray-700 whitespace-nowrap">Engagé</th>}
+              {col('disponible') && <th className="px-2 sm:px-4 py-2 sm:py-3 text-right text-xs sm:text-sm font-semibold text-gray-700 whitespace-nowrap">Disponible</th>}
+              {col('utilisation') && <th className="px-2 sm:px-4 py-2 sm:py-3 text-center text-xs sm:text-sm font-semibold text-gray-700 whitespace-nowrap">Utilisation</th>}
+              {col('notes') && <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs sm:text-sm font-semibold text-gray-700 whitespace-nowrap">Notes</th>}
               {customColumns.map(column => (
                 <th key={column.id} className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs sm:text-sm font-semibold text-gray-700 whitespace-nowrap">
                   {column.name}
                 </th>
               ))}
-              <th className="px-2 sm:px-4 py-2 sm:py-3 text-center text-xs sm:text-sm font-semibold text-gray-700 whitespace-nowrap">
-                Actions
-              </th>
+              {col('actions') && <th className="px-2 sm:px-4 py-2 sm:py-3 text-center text-xs sm:text-sm font-semibold text-gray-700 whitespace-nowrap">Actions</th>}
             </tr>
           </thead>
           <tbody>
             {suppliers.map((supplier) => {
+              const impact = orderImpactBySupplier[String(supplier.id)] || { engagement: 0, depense: 0 };
+              const totalDepense = supplier.depenseActuelle + impact.depense;
+              const totalEngagement = supplier.engagement + impact.engagement;
               const disponible = calculateAvailable(
                 supplier.budgetAnnuel,
-                supplier.depenseActuelle,
-                supplier.engagement
+                totalDepense,
+                totalEngagement
               );
               const utilisation = calculateUsageRate(
                 supplier.budgetAnnuel,
-                supplier.depenseActuelle,
-                supplier.engagement
+                totalDepense,
+                totalEngagement
               );
 
               return (
                 <tr key={supplier.id} className="border-b hover:bg-gray-50">
-                  <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-medium text-gray-900 whitespace-nowrap">
-                    {supplier.supplier}
-                  </td>
-                  <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-gray-700 whitespace-nowrap">{supplier.category}</td>
-                  <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-right text-gray-900 whitespace-nowrap">
-                    {formatCurrency(supplier.budgetAnnuel)}
-                  </td>
-                  <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-right text-orange-600 whitespace-nowrap">
-                    {formatCurrency(supplier.depenseActuelle)}
-                  </td>
-                  <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-right text-yellow-600 whitespace-nowrap">
-                    {formatCurrency(supplier.engagement)}
-                  </td>
-                  <td
-                    className={`px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-right font-semibold whitespace-nowrap ${
-                      disponible < 0 ? 'text-red-600' : 'text-green-600'
-                    }`}
-                  >
-                    {formatCurrency(disponible)}
-                  </td>
-                  <td className="px-2 sm:px-4 py-2 sm:py-3">
-                    <div className="flex flex-col items-center min-w-[80px] sm:min-w-[100px]">
-                      <span className="text-xs sm:text-sm font-semibold mb-1">
-                        {utilisation.toFixed(1)}%
-                      </span>
-                      <ProgressBar value={utilisation} showLabel={false} size="sm" />
-                    </div>
-                  </td>
-                  <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-gray-600 max-w-[120px] sm:max-w-xs truncate">
-                    {supplier.notes}
-                  </td>
+                  {col('supplier') && <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-medium text-gray-900 whitespace-nowrap">{supplier.supplier}</td>}
+                  {col('category') && <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-gray-700 whitespace-nowrap">{supplier.category}</td>}
+                  {col('budgetAnnuel') && <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-right text-gray-900 whitespace-nowrap">{formatCurrency(supplier.budgetAnnuel)}</td>}
+                  {col('depenseActuelle') && <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-right text-orange-600 whitespace-nowrap">{formatCurrency(totalDepense)}</td>}
+                  {col('engagement') && <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-right text-yellow-600 whitespace-nowrap">{formatCurrency(totalEngagement)}</td>}
+                  {col('disponible') && (
+                    <td className={`px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-right font-semibold whitespace-nowrap ${disponible < 0 ? 'text-red-600' : 'text-green-600'}`}>
+                      {formatCurrency(disponible)}
+                    </td>
+                  )}
+                  {col('utilisation') && (
+                    <td className="px-2 sm:px-4 py-2 sm:py-3">
+                      <div className="flex flex-col items-center min-w-[80px] sm:min-w-[100px]">
+                        <span className="text-xs sm:text-sm font-semibold mb-1">{utilisation.toFixed(1)}%</span>
+                        <ProgressBar value={utilisation} showLabel={false} size="sm" warningThreshold={settings.rules.warningThreshold} criticalThreshold={settings.rules.criticalThreshold} />
+                      </div>
+                    </td>
+                  )}
+                  {col('notes') && <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-gray-600 max-w-[120px] sm:max-w-xs truncate">{supplier.notes}</td>}
                   {customColumns.map(column => (
                     <td key={column.id} className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-gray-700 whitespace-nowrap">
                       {supplier[column.id] || '-'}
                     </td>
                   ))}
-                  <td className="px-2 sm:px-4 py-2 sm:py-3">
-                    <div className="flex gap-1 sm:gap-2 justify-center">
-                      {permissions.can('edit', 'opex') && (
-                        <button
-                          onClick={() => onEdit(supplier)}
-                          className="p-1 text-blue-600 hover:bg-blue-50 rounded touch-manipulation"
-                          title="Modifier"
-                        >
-                          <Edit2 size={16} />
-                        </button>
-                      )}
-                      {permissions.can('delete', 'opex') && (
-                        <button
-                          onClick={() => handleDeleteClick(supplier)}
-                          className="p-1 text-red-600 hover:bg-red-50 rounded touch-manipulation"
-                          title="Supprimer"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      )}
-                    </div>
-                  </td>
+                  {col('actions') && (
+                    <td className="px-2 sm:px-4 py-2 sm:py-3">
+                      <div className="flex gap-1 sm:gap-2 justify-center">
+                        {permissions.can('edit', 'opex') && (
+                          <button onClick={() => onEdit(supplier)} className="p-1 text-blue-600 hover:bg-blue-50 rounded touch-manipulation" title="Modifier">
+                            <Edit2 size={16} />
+                          </button>
+                        )}
+                        {permissions.can('delete', 'opex') && (
+                          <button onClick={() => handleDeleteClick(supplier)} className="p-1 text-red-600 hover:bg-red-50 rounded touch-manipulation" title="Supprimer">
+                            <Trash2 size={16} />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  )}
                 </tr>
               );
             })}
           </tbody>
           <tfoot className="bg-gray-100 font-semibold">
             <tr>
-              <td colSpan="2" className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-gray-900 whitespace-nowrap">
-                TOTAL
-              </td>
-              <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-right text-gray-900 whitespace-nowrap">
-                {formatCurrency(totals.budget)}
-              </td>
-              <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-right text-orange-600 whitespace-nowrap">
-                {formatCurrency(totals.depense)}
-              </td>
-              <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-right text-yellow-600 whitespace-nowrap">
-                {formatCurrency(totals.engagement)}
-              </td>
-              <td
-                className={`px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-right whitespace-nowrap ${
-                  totals.disponible < 0 ? 'text-red-600' : 'text-green-600'
-                }`}
-              >
-                {formatCurrency(totals.disponible)}
-              </td>
-              <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-center whitespace-nowrap">
-                {totals.tauxUtilisation.toFixed(1)}%
-              </td>
-              <td colSpan="2"></td>
+              {col('supplier') && <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-gray-900 whitespace-nowrap" colSpan={col('category') ? 1 : 1}>TOTAL</td>}
+              {col('category') && <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-gray-900 whitespace-nowrap"></td>}
+              {col('budgetAnnuel') && <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-right text-gray-900 whitespace-nowrap">{formatCurrency(totals.budget)}</td>}
+              {col('depenseActuelle') && <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-right text-orange-600 whitespace-nowrap">{formatCurrency(totals.depense)}</td>}
+              {col('engagement') && <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-right text-yellow-600 whitespace-nowrap">{formatCurrency(totals.engagement)}</td>}
+              {col('disponible') && <td className={`px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-right whitespace-nowrap ${totals.disponible < 0 ? 'text-red-600' : 'text-green-600'}`}>{formatCurrency(totals.disponible)}</td>}
+              {col('utilisation') && <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-center whitespace-nowrap">{totals.tauxUtilisation.toFixed(1)}%</td>}
+              {col('notes') && <td></td>}
+              {customColumns.map(column => <td key={column.id}></td>)}
+              {col('actions') && <td></td>}
             </tr>
           </tfoot>
         </table>

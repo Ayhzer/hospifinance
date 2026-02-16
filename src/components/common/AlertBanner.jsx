@@ -32,14 +32,14 @@ const ALERT_TYPES = {
   }
 };
 
-export const AlertBanner = ({ type = 'info', message, className = '' }) => {
+export const AlertBanner = ({ type = 'info', message, children, className = '' }) => {
   const config = ALERT_TYPES[type] || ALERT_TYPES.info;
   const Icon = config.icon;
 
   return (
-    <div className={`flex items-center gap-2 p-3 rounded-lg ${config.bgColor} ${className}`}>
-      <Icon size={18} className={config.iconColor} />
-      <span className={`text-sm ${config.textColor}`}>{message}</span>
+    <div className={`flex items-start gap-2 p-3 rounded-lg ${config.bgColor} ${className}`}>
+      <Icon size={18} className={`${config.iconColor} flex-shrink-0 mt-0.5`} />
+      <span className={`text-sm ${config.textColor}`}>{message || children}</span>
     </div>
   );
 };

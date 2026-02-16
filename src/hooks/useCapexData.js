@@ -3,13 +3,14 @@
  * LocalStorage si VITE_API_URL absent, API sinon
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 const USE_API = !!import.meta.env.VITE_API_URL;
 
 import { saveCapexData, loadCapexData, hasCapexData, markAsInitialized } from '../services/storageService';
 import { validateCapexData, parseNumber, sanitizeString } from '../utils/validators';
 import * as api from '../services/apiService';
+import * as github from '../services/githubStorageService';
 
 const DEFAULT_CAPEX_DATA = [
   { id: 1, enveloppe: 'Infrastructure', project: 'Renouvellement Datacenter', budgetTotal: 2000000, depense: 1200000, engagement: 300000, dateDebut: '2024-01-01', dateFin: '2024-12-31', status: 'En cours', notes: 'Phase 2 en cours' },
@@ -21,6 +22,8 @@ export const useCapexData = () => {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const githubPushTimer = useRef(null);
+  const skipNextGithubPush = useRef(false);
 
   useEffect(() => {
     const loadData = async () => {
@@ -50,13 +53,36 @@ export const useCapexData = () => {
           setProjects([]);
         }
         setLoading(false);
+
+        // Sync depuis GitHub après chargement local
+        if (github.isGitHubEnabled()) {
+          github.fetchCapex().then(data => {
+            if (data !== null) {
+              skipNextGithubPush.current = true;
+              setProjects(data);
+              saveCapexData(data);
+            }
+          }).catch(err => console.warn('[GitHub] Sync CAPEX échoué:', err.message));
+        }
       }
     };
     loadData();
   }, []);
 
   useEffect(() => {
-    if (!USE_API && !loading) saveCapexData(projects);
+    if (!USE_API && !loading) {
+      saveCapexData(projects);
+      if (github.isGitHubEnabled()) {
+        if (skipNextGithubPush.current) {
+          skipNextGithubPush.current = false;
+          return;
+        }
+        clearTimeout(githubPushTimer.current);
+        githubPushTimer.current = setTimeout(() => {
+          github.pushCapex(projects).catch(err => console.warn('[GitHub] Push CAPEX échoué:', err.message));
+        }, 800);
+      }
+    }
   }, [projects, loading]);
 
   const addProject = useCallback(async (projectData) => {

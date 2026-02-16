@@ -4,13 +4,24 @@
 
 import React from 'react';
 
-const BUTTON_VARIANTS = {
-  primary: 'bg-blue-600 hover:bg-blue-700 text-white',
+// Classes de base (structure) sans couleur pour les variantes qui utilisent CSS vars
+const BUTTON_VARIANT_CLASSES = {
+  primary: 'text-white',
   secondary: 'bg-gray-100 hover:bg-gray-200 text-gray-700',
-  success: 'bg-green-600 hover:bg-green-700 text-white',
-  danger: 'bg-red-600 hover:bg-red-700 text-white',
-  warning: 'bg-yellow-500 hover:bg-yellow-600 text-white',
+  success: 'text-white',
+  danger: 'text-white',
+  warning: 'text-white',
   outline: 'border border-gray-300 text-gray-700 hover:bg-gray-50'
+};
+
+// Styles inline pour les variantes utilisant les CSS variables de couleur
+const BUTTON_VARIANT_STYLES = {
+  primary: { backgroundColor: 'var(--color-primary)' },
+  secondary: {},
+  success: { backgroundColor: 'var(--color-success)' },
+  danger: { backgroundColor: 'var(--color-danger)' },
+  warning: { backgroundColor: 'var(--color-warning)' },
+  outline: {}
 };
 
 const BUTTON_SIZES = {
@@ -30,7 +41,8 @@ export const Button = ({
   type = 'button',
   ...props
 }) => {
-  const variantClass = BUTTON_VARIANTS[variant] || BUTTON_VARIANTS.primary;
+  const variantClass = BUTTON_VARIANT_CLASSES[variant] || BUTTON_VARIANT_CLASSES.primary;
+  const variantStyle = BUTTON_VARIANT_STYLES[variant] || {};
   const sizeClass = BUTTON_SIZES[size] || BUTTON_SIZES.md;
 
   return (
@@ -38,6 +50,7 @@ export const Button = ({
       type={type}
       onClick={onClick}
       disabled={disabled}
+      style={variantStyle}
       className={`
         flex items-center gap-2 rounded-lg transition-colors
         ${variantClass} ${sizeClass}

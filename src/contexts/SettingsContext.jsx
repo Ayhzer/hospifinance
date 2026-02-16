@@ -6,6 +6,7 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import * as api from '../services/apiService';
 import { saveSettings, loadSettings } from '../services/storageService';
+import * as github from '../services/githubStorageService';
 
 const USE_API = !!import.meta.env.VITE_API_URL;
 
@@ -73,6 +74,17 @@ export const SettingsProvider = ({ children }) => {
         const stored = loadSettings();
         if (stored) setSettings(mergeSettings(stored));
         setLoading(false);
+
+        // Sync paramètres depuis GitHub
+        if (github.isGitHubEnabled()) {
+          github.fetchSettings().then(data => {
+            if (data) {
+              const merged = mergeSettings(data);
+              setSettings(merged);
+              saveSettings(merged);
+            }
+          }).catch(err => console.warn('[GitHub] Sync paramètres échoué:', err.message));
+        }
       }
     };
     loadData();
@@ -97,6 +109,9 @@ export const SettingsProvider = ({ children }) => {
       } catch { /* silence */ }
     } else {
       saveSettings(updated);
+      if (github.isGitHubEnabled()) {
+        github.pushSettings(updated).catch(err => console.warn('[GitHub] Push paramètres échoué:', err.message));
+      }
     }
     return updated;
   }, []);

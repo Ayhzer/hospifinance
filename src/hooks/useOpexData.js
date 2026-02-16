@@ -3,14 +3,14 @@
  * LocalStorage si VITE_API_URL absent, API sinon
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 const USE_API = !!import.meta.env.VITE_API_URL;
 
-// ---- Imports conditionnels ----
 import { saveOpexData, loadOpexData, hasOpexData, markAsInitialized } from '../services/storageService';
 import { validateOpexData, parseNumber, sanitizeString } from '../utils/validators';
 import * as api from '../services/apiService';
+import * as github from '../services/githubStorageService';
 
 const DEFAULT_OPEX_DATA = [
   { id: 1, supplier: 'Oracle Health', category: 'Logiciels', budgetAnnuel: 500000, depenseActuelle: 375000, engagement: 50000, notes: 'Contrat de maintenance annuel' },
@@ -22,6 +22,8 @@ export const useOpexData = () => {
   const [suppliers, setSuppliers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const githubPushTimer = useRef(null);
+  const skipNextGithubPush = useRef(false);
 
   // ---- Chargement initial ----
   useEffect(() => {
@@ -52,14 +54,37 @@ export const useOpexData = () => {
           setSuppliers([]);
         }
         setLoading(false);
+
+        // Sync depuis GitHub après chargement local (source de vérité distante)
+        if (github.isGitHubEnabled()) {
+          github.fetchOpex().then(data => {
+            if (data !== null) {
+              skipNextGithubPush.current = true;
+              setSuppliers(data);
+              saveOpexData(data);
+            }
+          }).catch(err => console.warn('[GitHub] Sync OPEX échoué:', err.message));
+        }
       }
     };
     loadData();
   }, []);
 
-  // ---- Sauvegarde auto (mode LocalStorage uniquement) ----
+  // ---- Sauvegarde auto localStorage + push GitHub (débounce 800ms) ----
   useEffect(() => {
-    if (!USE_API && !loading) saveOpexData(suppliers);
+    if (!USE_API && !loading) {
+      saveOpexData(suppliers);
+      if (github.isGitHubEnabled()) {
+        if (skipNextGithubPush.current) {
+          skipNextGithubPush.current = false;
+          return;
+        }
+        clearTimeout(githubPushTimer.current);
+        githubPushTimer.current = setTimeout(() => {
+          github.pushOpex(suppliers).catch(err => console.warn('[GitHub] Push OPEX échoué:', err.message));
+        }, 800);
+      }
+    }
   }, [suppliers, loading]);
 
   const addSupplier = useCallback(async (supplierData) => {

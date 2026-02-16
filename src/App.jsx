@@ -377,6 +377,7 @@ const HospitalITFinanceDashboard = () => {
           <OpexTable
             suppliers={suppliers}
             totals={opexTotals}
+            orders={opexOrders}
             onEdit={handleEditOpex}
             onDelete={handleDeleteOpex}
             onAdd={handleAddOpex}
@@ -390,6 +391,7 @@ const HospitalITFinanceDashboard = () => {
           <CapexTable
             projects={projects}
             totals={capexTotals}
+            orders={capexOrders}
             onEdit={handleEditCapex}
             onDelete={handleDeleteCapex}
             onAdd={handleAddCapex}

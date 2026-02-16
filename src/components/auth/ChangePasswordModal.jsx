@@ -8,7 +8,6 @@ import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
 import { AlertBanner } from '../common/AlertBanner';
 import { useAuth } from '../../contexts/AuthContext';
-import { verifyPassword } from '../../utils/authUtils';
 
 export const ChangePasswordModal = ({ isOpen, onClose, targetUser }) => {
   const { user, changePassword } = useAuth();
@@ -78,21 +77,10 @@ export const ChangePasswordModal = ({ isOpen, onClose, targetUser }) => {
     setLoading(true);
 
     try {
-      // Si c'est son propre mot de passe, vérifier le mot de passe actuel
-      if (isOwnPassword) {
-        const currentUser = targetUser || user;
-        const isValid = await verifyPassword(formData.currentPassword, currentUser.passwordHash);
-
-        if (!isValid) {
-          setError('Le mot de passe actuel est incorrect');
-          setLoading(false);
-          return;
-        }
-      }
-
-      // Changer le mot de passe
+      // Changer le mot de passe (la vérification du mot de passe actuel est faite dans changePassword)
       const targetUserId = targetUser ? targetUser.id : user.id;
-      const result = await changePassword(targetUserId, formData.newPassword);
+      const currentPwd = isOwnPassword ? formData.currentPassword : null;
+      const result = await changePassword(targetUserId, formData.newPassword, currentPwd);
 
       if (result.success) {
         setSuccess(true);

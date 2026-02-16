@@ -3,13 +3,16 @@
  */
 
 import React, { useState } from 'react';
-import { Settings, Palette, Columns, Shield, Users, RotateCcw, Save, FileText, Trash2 } from 'lucide-react';
+import { Settings, Palette, Columns, Shield, Users, RotateCcw, Save, FileText, Trash2, Github, RefreshCw, Upload, CheckCircle, XCircle } from 'lucide-react';
 import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
+import { ConfirmDialog } from '../common/ConfirmDialog';
 import { useSettings } from '../../contexts/SettingsContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePermissions } from '../../contexts/PermissionsContext';
 import CustomColumnsManager from './CustomColumnsManager';
+import * as github from '../../services/githubStorageService';
+import { loadOpexData, loadCapexData, loadOpexOrders, loadCapexOrders, loadAuthUsers, loadSettings } from '../../services/storageService';
 
 const SETTINGS_TABS = [
   { id: 'appearance', label: 'Apparence', icon: Palette },
@@ -17,7 +20,8 @@ const SETTINGS_TABS = [
   { id: 'customColumns', label: 'Colonnes personnalisées', icon: Columns },
   { id: 'rules', label: 'Règles', icon: Shield },
   { id: 'users', label: 'Utilisateurs', icon: Users },
-  { id: 'logs', label: 'Logs', icon: FileText }
+  { id: 'logs', label: 'Logs', icon: FileText },
+  { id: 'github', label: 'GitHub', icon: Github },
 ];
 
 const COLOR_LABELS = {
@@ -85,6 +89,13 @@ export const SettingsPanel = () => {
   const [userError, setUserError] = useState('');
   const [changePasswordId, setChangePasswordId] = useState(null);
   const [changePasswordValue, setChangePasswordValue] = useState('');
+  const [confirmPurge, setConfirmPurge] = useState(false);
+
+  // ---- État GitHub ----
+  const [ghConfig, setGhConfig] = useState(() => github.loadGithubConfig() || { enabled: false, token: '', owner: '', repo: '', branch: 'main', dataPath: 'data' });
+  const [ghTestStatus, setGhTestStatus] = useState(null); // { success, message }
+  const [ghSyncing, setGhSyncing] = useState(false);
+  const [ghPushing, setGhPushing] = useState(false);
 
   const handleAddUser = async () => {
     if (!newUsername || !newPassword) {
@@ -114,6 +125,58 @@ export const SettingsPanel = () => {
     if (!result.success) {
       setUserError(result.error);
       setTimeout(() => setUserError(''), 3000);
+    }
+  };
+
+  // ---- Handlers GitHub ----
+  const handleGhSave = () => {
+    github.saveGithubConfig(ghConfig);
+    setGhTestStatus({ success: true, message: 'Configuration sauvegardée. Rechargez la page pour activer la synchronisation.' });
+  };
+
+  const handleGhTest = async () => {
+    setGhTestStatus(null);
+    const result = await github.testConnection(ghConfig);
+    setGhTestStatus(result);
+  };
+
+  const handleGhSyncNow = async () => {
+    setGhSyncing(true);
+    setGhTestStatus(null);
+    try {
+      const data = await github.fetchAllData(ghConfig);
+      setGhTestStatus({ success: true, message: `Synchronisation OK — données récupérées depuis GitHub. Rechargez la page pour les appliquer.` });
+      // Mettre à jour le localStorage pour que le reload charge les bonnes données
+      if (data?.opex)        localStorage.setItem('hospifinance_opex_suppliers',  JSON.stringify(data.opex));
+      if (data?.capex)       localStorage.setItem('hospifinance_capex_projects',   JSON.stringify(data.capex));
+      if (data?.opexOrders)  localStorage.setItem('hospifinance_opex_orders',      JSON.stringify(data.opexOrders));
+      if (data?.capexOrders) localStorage.setItem('hospifinance_capex_orders',     JSON.stringify(data.capexOrders));
+      if (data?.users)       localStorage.setItem('hospifinance_auth_users',       JSON.stringify(data.users));
+      if (data?.settings)    localStorage.setItem('hospifinance_settings',         JSON.stringify(data.settings));
+    } catch (err) {
+      setGhTestStatus({ success: false, message: `Erreur: ${err.message}` });
+    } finally {
+      setGhSyncing(false);
+    }
+  };
+
+  const handleGhPushAll = async () => {
+    setGhPushing(true);
+    setGhTestStatus(null);
+    try {
+      await github.pushAllData({
+        opex:        loadOpexData()     || [],
+        capex:       loadCapexData()    || [],
+        opexOrders:  loadOpexOrders()   || [],
+        capexOrders: loadCapexOrders()  || [],
+        users:       loadAuthUsers()    || [],
+        settings:    loadSettings()     || {},
+      }, ghConfig);
+      setGhTestStatus({ success: true, message: 'Toutes les données ont été poussées vers GitHub avec succès.' });
+    } catch (err) {
+      setGhTestStatus({ success: false, message: `Erreur: ${err.message}` });
+    } finally {
+      setGhPushing(false);
     }
   };
 
@@ -442,7 +505,7 @@ export const SettingsPanel = () => {
                 </span>
               </h3>
               {isAdmin && authLogs.length > 0 && (
-                <Button variant="secondary" size="sm" icon={<Trash2 size={16} />} onClick={clearLogs}>
+                <Button variant="secondary" size="sm" icon={<Trash2 size={16} />} onClick={() => setConfirmPurge(true)}>
                   Purger
                 </Button>
               )}
@@ -480,6 +543,93 @@ export const SettingsPanel = () => {
             )}
           </div>
         )}
+
+        {/* GitHub Sync */}
+        {activeSettingsTab === 'github' && (
+          <div className="space-y-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-semibold text-gray-800">Synchronisation GitHub</h3>
+                <p className="text-xs text-gray-500 mt-0.5">Les données sont stockées comme fichiers JSON dans votre dépôt Git</p>
+              </div>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <span className="text-xs text-gray-600">Activer</span>
+                <input type="checkbox" checked={!!ghConfig.enabled} onChange={e => setGhConfig(c => ({ ...c, enabled: e.target.checked }))} className="w-4 h-4" />
+              </label>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Personal Access Token *</label>
+                <input type="password" value={ghConfig.token} onChange={e => setGhConfig(c => ({ ...c, token: e.target.value }))}
+                  placeholder="ghp_xxxxxxxxxxxx"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" />
+                <p className="text-[10px] text-gray-400 mt-0.5">Droits requis : Contents (read & write)</p>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Owner (user ou org) *</label>
+                <input type="text" value={ghConfig.owner} onChange={e => setGhConfig(c => ({ ...c, owner: e.target.value }))}
+                  placeholder="mon-org"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Nom du dépôt *</label>
+                <input type="text" value={ghConfig.repo} onChange={e => setGhConfig(c => ({ ...c, repo: e.target.value }))}
+                  placeholder="hospifinance"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Branche</label>
+                <input type="text" value={ghConfig.branch} onChange={e => setGhConfig(c => ({ ...c, branch: e.target.value }))}
+                  placeholder="main"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-medium text-gray-700 mb-1">Dossier données</label>
+                <input type="text" value={ghConfig.dataPath} onChange={e => setGhConfig(c => ({ ...c, dataPath: e.target.value }))}
+                  placeholder="data"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" />
+                <p className="text-[10px] text-gray-400 mt-0.5">Les fichiers JSON seront créés dans ce dossier (ex: data/opex.json)</p>
+              </div>
+            </div>
+
+            {/* Feedback */}
+            {ghTestStatus && (
+              <div className={`flex items-start gap-2 p-3 rounded-lg text-sm ${ghTestStatus.success ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
+                {ghTestStatus.success ? <CheckCircle size={16} className="flex-shrink-0 mt-0.5" /> : <XCircle size={16} className="flex-shrink-0 mt-0.5" />}
+                <span>{ghTestStatus.message}</span>
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex flex-wrap gap-2 pt-1">
+              <Button variant="primary" size="sm" icon={<Save size={14} />} onClick={handleGhSave}>
+                Sauvegarder
+              </Button>
+              <Button variant="secondary" size="sm" icon={<CheckCircle size={14} />} onClick={handleGhTest}>
+                Tester la connexion
+              </Button>
+              <Button variant="secondary" size="sm" icon={<RefreshCw size={14} className={ghSyncing ? 'animate-spin' : ''} />}
+                onClick={handleGhSyncNow} disabled={ghSyncing}>
+                {ghSyncing ? 'Syncing...' : 'Récupérer depuis GitHub'}
+              </Button>
+              <Button variant="warning" size="sm" icon={<Upload size={14} />}
+                onClick={handleGhPushAll} disabled={ghPushing}>
+                {ghPushing ? 'Envoi...' : 'Pousser tout vers GitHub'}
+              </Button>
+            </div>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-800">
+              <strong>Fonctionnement :</strong>
+              <ul className="mt-1 space-y-0.5 list-disc list-inside">
+                <li>Au démarrage, les données locales sont chargées instantanément, puis synchronisées depuis GitHub</li>
+                <li>Chaque modification est automatiquement poussée vers GitHub (délai 800ms)</li>
+                <li>Utilisez <strong>«&nbsp;Pousser tout&nbsp;»</strong> lors de la première configuration pour uploader vos données existantes</li>
+                <li>Le token est stocké localement dans votre navigateur (jamais transmis ailleurs)</li>
+              </ul>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Footer */}
@@ -491,6 +641,16 @@ export const SettingsPanel = () => {
           Fermer
         </Button>
       </div>
+
+      <ConfirmDialog
+        isOpen={confirmPurge}
+        onClose={() => setConfirmPurge(false)}
+        onConfirm={() => { clearLogs(); setConfirmPurge(false); }}
+        title="Purger les logs"
+        message="Êtes-vous sûr de vouloir supprimer tous les logs de connexion ? Cette action est irréversible."
+        confirmText="Purger"
+        variant="danger"
+      />
     </Modal>
   );
 };

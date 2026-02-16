@@ -10,6 +10,7 @@ import {
   saveAuthSession, loadAuthSession, clearAuthSession,
   saveAuthLog, loadAuthLogs, clearAuthLogs
 } from '../services/storageService';
+import * as github from '../services/githubStorageService';
 
 const USE_API = !!import.meta.env.VITE_API_URL;
 
@@ -58,6 +59,16 @@ export const AuthProvider = ({ children }) => {
           if (found) setUser({ id: found.id, username: found.username, role: found.role });
           else clearAuthSession();
         }
+
+        // Sync utilisateurs depuis GitHub (source de vérité distante)
+        if (github.isGitHubEnabled()) {
+          github.fetchUsers().then(data => {
+            if (data !== null) {
+              saveAuthUsers(data);
+              setUsers(data);
+            }
+          }).catch(err => console.warn('[GitHub] Sync utilisateurs échoué:', err.message));
+        }
         setLoading(false);
       }
     };
@@ -97,6 +108,7 @@ export const AuthProvider = ({ children }) => {
         return { success: false, error: 'Identifiants incorrects' };
       }
       setUser({ id: found.id, username: found.username, role: found.role });
+      setUsers(allUsers);
       saveAuthSession({ userId: found.id });
       saveAuthLog({ id: Date.now(), type: 'login_success', username, timestamp: new Date().toISOString() });
       setAuthLogs(loadAuthLogs());
@@ -132,6 +144,7 @@ export const AuthProvider = ({ children }) => {
       const updated = [...allUsers, newUser];
       saveAuthUsers(updated);
       setUsers(updated);
+      if (github.isGitHubEnabled()) github.pushUsers(updated).catch(err => console.warn('[GitHub] Push utilisateurs échoué:', err.message));
       return { success: true };
     }
   }, []);
@@ -149,6 +162,7 @@ export const AuthProvider = ({ children }) => {
       const updated = (loadAuthUsers() || []).filter(u => u.id !== userId);
       saveAuthUsers(updated);
       setUsers(updated);
+      if (github.isGitHubEnabled()) github.pushUsers(updated).catch(err => console.warn('[GitHub] Push utilisateurs échoué:', err.message));
       return { success: true };
     }
   }, []);
@@ -160,6 +174,7 @@ export const AuthProvider = ({ children }) => {
       const updated = (loadAuthUsers() || []).map(u => u.id === userId ? { ...u, disabled: !u.disabled } : u);
       saveAuthUsers(updated);
       setUsers(updated);
+      if (github.isGitHubEnabled()) github.pushUsers(updated).catch(err => console.warn('[GitHub] Push utilisateurs échoué:', err.message));
       return { success: true };
     }
   }, []);
@@ -180,6 +195,7 @@ export const AuthProvider = ({ children }) => {
       const updated = allUsers.map(u => u.id === userId ? { ...u, password: btoa(newPassword) } : u);
       saveAuthUsers(updated);
       setUsers(updated);
+      if (github.isGitHubEnabled()) github.pushUsers(updated).catch(err => console.warn('[GitHub] Push utilisateurs échoué:', err.message));
       return { success: true };
     }
   }, []);

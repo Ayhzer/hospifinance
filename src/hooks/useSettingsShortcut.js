@@ -16,7 +16,7 @@ export const useSettingsShortcut = () => {
   // Raccourci clavier Ctrl+Shift+P (uniquement si autorisé)
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.ctrlKey && e.shiftKey && e.key === 'P') {
+      if (e.ctrlKey && e.shiftKey && e.key.toUpperCase() === 'P') {
         e.preventDefault();
 
         // Vérifier les permissions avant d'ouvrir

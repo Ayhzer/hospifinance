@@ -2,13 +2,14 @@
  * Hook personnalisé pour la gestion des commandes (OPEX ou CAPEX)
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   saveOpexOrders, loadOpexOrders,
   saveCapexOrders, loadCapexOrders
 } from '../services/storageService';
 import { validateOrderData, parseNumber, sanitizeString } from '../utils/validators';
 import { ORDER_STATUS } from '../constants/orderConstants';
+import * as github from '../services/githubStorageService';
 
 const saveFunctions = {
   opex: saveOpexOrders,
@@ -20,27 +21,62 @@ const loadFunctions = {
   capex: loadCapexOrders
 };
 
+const githubFetchFns = {
+  opex:  () => github.fetchOpexOrders(),
+  capex: () => github.fetchCapexOrders(),
+};
+
+const githubPushFns = {
+  opex:  (data) => github.pushOpexOrders(data),
+  capex: (data) => github.pushCapexOrders(data),
+};
+
 export const useOrderData = (type = 'opex') => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const githubPushTimer = useRef(null);
+  const skipNextGithubPush = useRef(false);
 
-  const saveFn = saveFunctions[type];
-  const loadFn = loadFunctions[type];
+  const saveFn  = saveFunctions[type];
+  const loadFn  = loadFunctions[type];
+  const ghFetch = githubFetchFns[type];
+  const ghPush  = githubPushFns[type];
 
   // Chargement initial
   useEffect(() => {
     const storedData = loadFn();
     setOrders(storedData || []);
     setLoading(false);
-  }, [loadFn]);
 
-  // Sauvegarde automatique
+    // Sync depuis GitHub
+    if (github.isGitHubEnabled()) {
+      ghFetch().then(data => {
+        if (data !== null) {
+          skipNextGithubPush.current = true;
+          setOrders(data);
+          saveFn(data);
+        }
+      }).catch(err => console.warn(`[GitHub] Sync commandes ${type} échoué:`, err.message));
+    }
+  }, [loadFn, saveFn, ghFetch, type]);
+
+  // Sauvegarde automatique localStorage + push GitHub
   useEffect(() => {
     if (!loading) {
       saveFn(orders);
+      if (github.isGitHubEnabled()) {
+        if (skipNextGithubPush.current) {
+          skipNextGithubPush.current = false;
+          return;
+        }
+        clearTimeout(githubPushTimer.current);
+        githubPushTimer.current = setTimeout(() => {
+          ghPush(orders).catch(err => console.warn(`[GitHub] Push commandes ${type} échoué:`, err.message));
+        }, 800);
+      }
     }
-  }, [orders, loading, saveFn]);
+  }, [orders, loading, saveFn, ghPush, type]);
 
   const addOrder = useCallback((orderData) => {
     const validation = validateOrderData(orderData);

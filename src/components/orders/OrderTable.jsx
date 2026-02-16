@@ -27,7 +27,7 @@ export const OrderTable = ({ orders, parentItems, parentLabel, parentNameKey, ty
   }, [deleteConfirm, onDelete]);
 
   const getParentName = (parentId) => {
-    const parent = parentItems.find(p => p.id === parentId);
+    const parent = parentItems.find(p => String(p.id) === String(parentId));
     return parent ? parent[parentNameKey] : 'Inconnu';
   };
 

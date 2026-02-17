@@ -3,7 +3,7 @@
  * Tableau de bord financier DSI - Version 3.0
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { DollarSign, Server, LogOut, Settings } from 'lucide-react';
 
 // Contextes
@@ -60,6 +60,16 @@ const HospitalITFinanceDashboard = () => {
   const [editingOpexOrder, setEditingOpexOrder] = useState(null);
   const [showCapexOrderModal, setShowCapexOrderModal] = useState(false);
   const [editingCapexOrder, setEditingCapexOrder] = useState(null);
+
+  // Refs pour éviter les closures stale dans les handlers async
+  const editingOpexRef = useRef(editingOpex);
+  const editingCapexRef = useRef(editingCapex);
+  const editingOpexOrderRef = useRef(editingOpexOrder);
+  const editingCapexOrderRef = useRef(editingCapexOrder);
+  useEffect(() => { editingOpexRef.current = editingOpex; }, [editingOpex]);
+  useEffect(() => { editingCapexRef.current = editingCapex; }, [editingCapex]);
+  useEffect(() => { editingOpexOrderRef.current = editingOpexOrder; }, [editingOpexOrder]);
+  useEffect(() => { editingCapexOrderRef.current = editingCapexOrder; }, [editingCapexOrder]);
 
   // Hooks de données OPEX
   const {
@@ -124,8 +134,9 @@ const HospitalITFinanceDashboard = () => {
 
   const handleSaveOpex = useCallback(
     async (data) => {
-      const result = editingOpex
-        ? await updateSupplier(editingOpex.id, data)
+      const current = editingOpexRef.current;
+      const result = current
+        ? await updateSupplier(current.id, data)
         : await addSupplier(data);
 
       if (result.success) {
@@ -135,7 +146,7 @@ const HospitalITFinanceDashboard = () => {
         setOpexError(result.errors ? result.errors.join(', ') : 'Erreur lors de la sauvegarde');
       }
     },
-    [editingOpex, addSupplier, updateSupplier, setOpexError]
+    [addSupplier, updateSupplier, setOpexError]
   );
 
   const handleDeleteOpex = useCallback(
@@ -163,8 +174,9 @@ const HospitalITFinanceDashboard = () => {
 
   const handleSaveCapex = useCallback(
     async (data) => {
-      const result = editingCapex
-        ? await updateProject(editingCapex.id, data)
+      const current = editingCapexRef.current;
+      const result = current
+        ? await updateProject(current.id, data)
         : await addProject(data);
 
       if (result.success) {
@@ -174,7 +186,7 @@ const HospitalITFinanceDashboard = () => {
         setCapexError(result.errors ? result.errors.join(', ') : 'Erreur lors de la sauvegarde');
       }
     },
-    [editingCapex, addProject, updateProject, setCapexError]
+    [addProject, updateProject, setCapexError]
   );
 
   const handleDeleteCapex = useCallback(
@@ -202,8 +214,9 @@ const HospitalITFinanceDashboard = () => {
 
   const handleSaveOpexOrder = useCallback(
     async (data) => {
-      const result = editingOpexOrder
-        ? await updateOpexOrder(editingOpexOrder.id, data)
+      const current = editingOpexOrderRef.current;
+      const result = current
+        ? await updateOpexOrder(current.id, data)
         : await addOpexOrder(data);
 
       if (result.success) {
@@ -213,7 +226,7 @@ const HospitalITFinanceDashboard = () => {
         setOpexOrdersError(result.errors ? result.errors.join(', ') : 'Erreur lors de la sauvegarde');
       }
     },
-    [editingOpexOrder, addOpexOrder, updateOpexOrder, setOpexOrdersError]
+    [addOpexOrder, updateOpexOrder, setOpexOrdersError]
   );
 
   const handleDeleteOpexOrder = useCallback(
@@ -234,8 +247,9 @@ const HospitalITFinanceDashboard = () => {
 
   const handleSaveCapexOrder = useCallback(
     async (data) => {
-      const result = editingCapexOrder
-        ? await updateCapexOrder(editingCapexOrder.id, data)
+      const current = editingCapexOrderRef.current;
+      const result = current
+        ? await updateCapexOrder(current.id, data)
         : await addCapexOrder(data);
 
       if (result.success) {
@@ -245,7 +259,7 @@ const HospitalITFinanceDashboard = () => {
         setCapexOrdersError(result.errors ? result.errors.join(', ') : 'Erreur lors de la sauvegarde');
       }
     },
-    [editingCapexOrder, addCapexOrder, updateCapexOrder, setCapexOrdersError]
+    [addCapexOrder, updateCapexOrder, setCapexOrdersError]
   );
 
   const handleDeleteCapexOrder = useCallback(

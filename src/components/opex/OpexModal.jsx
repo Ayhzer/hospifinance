@@ -26,6 +26,7 @@ export const OpexModal = ({ isOpen, onClose, onSave, editingSupplier }) => {
 
   // Colonnes personnalisées pour OPEX
   const customColumns = settings.customColumns?.opex || [];
+  const customColumnsKey = JSON.stringify(customColumns);
 
   useEffect(() => {
     if (editingSupplier) {
@@ -50,7 +51,7 @@ export const OpexModal = ({ isOpen, onClose, onSave, editingSupplier }) => {
       });
       setFormData(emptyForm);
     }
-  }, [editingSupplier, isOpen, customColumns]);
+  }, [editingSupplier, isOpen, customColumnsKey]);
 
   const handleChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));

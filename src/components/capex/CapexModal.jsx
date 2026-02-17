@@ -39,6 +39,7 @@ export const CapexModal = ({ isOpen, onClose, onSave, editingProject }) => {
 
   // Colonnes personnalisées pour CAPEX
   const customColumns = settings.customColumns?.capex || [];
+  const customColumnsKey = JSON.stringify(customColumns);
 
   useEffect(() => {
     if (editingProject) {
@@ -66,7 +67,7 @@ export const CapexModal = ({ isOpen, onClose, onSave, editingProject }) => {
       });
       setFormData(emptyForm);
     }
-  }, [editingProject, isOpen, customColumns]);
+  }, [editingProject, isOpen, customColumnsKey]);
 
   const handleChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));

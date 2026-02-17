@@ -133,7 +133,10 @@ export const useOpexData = () => {
     if (USE_API) {
       try {
         const updated = await api.updateOpex(id, supplierData);
-        setSuppliers(prev => prev.map(s => s.id === id ? updated : s));
+        setSuppliers(prev => {
+          const deduped = prev.filter((s, i, arr) => arr.findIndex(x => String(x.id) === String(s.id)) === i);
+          return deduped.map(s => String(s.id) === String(id) ? updated : s);
+        });
         setError(null);
         return { success: true, data: updated };
       } catch (err) {
@@ -153,7 +156,10 @@ export const useOpexData = () => {
         notes: sanitizeString(supplierData.notes),
         ...customFields
       };
-      setSuppliers(prev => prev.map(s => s.id === id ? updated : s));
+      setSuppliers(prev => {
+        const deduped = prev.filter((s, i, arr) => arr.findIndex(x => String(x.id) === String(s.id)) === i);
+        return deduped.map(s => String(s.id) === String(id) ? updated : s);
+      });
       setError(null);
       return { success: true, data: updated };
     }

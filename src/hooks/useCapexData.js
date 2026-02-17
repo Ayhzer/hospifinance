@@ -134,7 +134,10 @@ export const useCapexData = () => {
     if (USE_API) {
       try {
         const updated = await api.updateCapex(id, projectData);
-        setProjects(prev => prev.map(p => p.id === id ? updated : p));
+        setProjects(prev => {
+          const deduped = prev.filter((p, i, arr) => arr.findIndex(x => String(x.id) === String(p.id)) === i);
+          return deduped.map(p => String(p.id) === String(id) ? updated : p);
+        });
         setError(null);
         return { success: true, data: updated };
       } catch (err) {
@@ -157,7 +160,10 @@ export const useCapexData = () => {
         notes: sanitizeString(projectData.notes),
         ...customFields
       };
-      setProjects(prev => prev.map(p => p.id === id ? updated : p));
+      setProjects(prev => {
+        const deduped = prev.filter((p, i, arr) => arr.findIndex(x => String(x.id) === String(p.id)) === i);
+        return deduped.map(p => String(p.id) === String(id) ? updated : p);
+      });
       setError(null);
       return { success: true, data: updated };
     }

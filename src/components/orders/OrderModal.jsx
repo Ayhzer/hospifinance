@@ -9,6 +9,7 @@ import { Input, TextArea, Select } from '../common/Input';
 import { ORDER_STATUS_LIST } from '../../constants/orderConstants';
 
 export const OrderModal = ({ isOpen, onClose, onSave, editingOrder, parentItems, parentLabel, parentNameKey }) => {
+  const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
     parentId: '',
     description: '',
@@ -51,8 +52,14 @@ export const OrderModal = ({ isOpen, onClose, onSave, editingOrder, parentItems,
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    await onSave(formData);
+    if (e) e.preventDefault();
+    if (saving) return;
+    setSaving(true);
+    try {
+      await onSave(formData);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const statusOptions = ORDER_STATUS_LIST.map(s => ({ value: s, label: s }));
@@ -66,9 +73,9 @@ export const OrderModal = ({ isOpen, onClose, onSave, editingOrder, parentItems,
       size="md"
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>Annuler</Button>
-          <Button variant="primary" onClick={handleSubmit}>
-            {editingOrder ? 'Modifier' : 'Ajouter'}
+          <Button variant="secondary" onClick={onClose} disabled={saving}>Annuler</Button>
+          <Button variant="primary" onClick={handleSubmit} disabled={saving}>
+            {saving ? 'Enregistrement...' : (editingOrder ? 'Modifier' : 'Ajouter')}
           </Button>
         </>
       }

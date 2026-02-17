@@ -35,6 +35,7 @@ const ENVELOPPE_OPTIONS = ENVELOPPES_CAPEX.map((env) => ({
 export const CapexModal = ({ isOpen, onClose, onSave, editingProject }) => {
   const { settings } = useSettings();
   const [formData, setFormData] = useState(EMPTY_FORM);
+  const [saving, setSaving] = useState(false);
 
   // Colonnes personnalisées pour CAPEX
   const customColumns = settings.customColumns?.capex || [];
@@ -72,7 +73,13 @@ export const CapexModal = ({ isOpen, onClose, onSave, editingProject }) => {
   };
 
   const handleSubmit = async () => {
-    await onSave(formData);
+    if (saving) return;
+    setSaving(true);
+    try {
+      await onSave(formData);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -83,11 +90,11 @@ export const CapexModal = ({ isOpen, onClose, onSave, editingProject }) => {
       size="md"
       footer={
         <>
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="outline" onClick={onClose} disabled={saving}>
             Annuler
           </Button>
-          <Button variant="success" icon={<Save size={16} />} onClick={handleSubmit}>
-            Enregistrer
+          <Button variant="success" icon={<Save size={16} />} onClick={handleSubmit} disabled={saving}>
+            {saving ? 'Enregistrement...' : 'Enregistrer'}
           </Button>
         </>
       }

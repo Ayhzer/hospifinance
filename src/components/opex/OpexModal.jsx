@@ -22,6 +22,7 @@ const EMPTY_FORM = {
 export const OpexModal = ({ isOpen, onClose, onSave, editingSupplier }) => {
   const { settings } = useSettings();
   const [formData, setFormData] = useState(EMPTY_FORM);
+  const [saving, setSaving] = useState(false);
 
   // Colonnes personnalisées pour OPEX
   const customColumns = settings.customColumns?.opex || [];
@@ -56,7 +57,13 @@ export const OpexModal = ({ isOpen, onClose, onSave, editingSupplier }) => {
   };
 
   const handleSubmit = async () => {
-    await onSave(formData);
+    if (saving) return;
+    setSaving(true);
+    try {
+      await onSave(formData);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -67,11 +74,11 @@ export const OpexModal = ({ isOpen, onClose, onSave, editingSupplier }) => {
       size="md"
       footer={
         <>
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="outline" onClick={onClose} disabled={saving}>
             Annuler
           </Button>
-          <Button variant="primary" icon={<Save size={16} />} onClick={handleSubmit}>
-            Enregistrer
+          <Button variant="primary" icon={<Save size={16} />} onClick={handleSubmit} disabled={saving}>
+            {saving ? 'Enregistrement...' : 'Enregistrer'}
           </Button>
         </>
       }

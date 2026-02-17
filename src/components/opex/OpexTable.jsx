@@ -2,8 +2,8 @@
  * Composant OpexTable - Tableau des fournisseurs OPEX
  */
 
-import React, { useState, useCallback } from 'react';
-import { Edit2, Trash2, Download, Plus, FileUp, FileDown, RotateCcw } from 'lucide-react';
+import React, { useState, useCallback, useMemo } from 'react';
+import { Edit2, Trash2, Download, Plus, FileUp, FileDown, RotateCcw, FilterX } from 'lucide-react';
 import { formatCurrency } from '../../utils/formatters';
 import { calculateAvailable, calculateUsageRate } from '../../utils/calculations';
 import { computeOrderImpactByParent } from '../../utils/orderCalculations';
@@ -12,6 +12,7 @@ import { importOpexFromCSV } from '../../utils/importUtils';
 import { usePermissions } from '../../contexts/PermissionsContext';
 import { useSettings } from '../../contexts/SettingsContext';
 import { useColumnResize } from '../../hooks/useColumnResize.jsx';
+import { useTableControls } from '../../hooks/useTableControls.jsx';
 import { Button } from '../common/Button';
 import { ProgressBar } from '../common/ProgressBar';
 import { ConfirmDialog } from '../common/ConfirmDialog';
@@ -43,6 +44,23 @@ export const OpexTable = ({ suppliers, totals, orders = [], onEdit, onDelete, on
 
   // Colonnes personnalisées pour OPEX
   const customColumns = settings.customColumns?.opex || [];
+
+  // Enrichir les données avec les calculs pour permettre le tri sur colonnes calculées
+  const enrichedSuppliers = useMemo(() => {
+    return suppliers.map(supplier => {
+      const impact = orderImpactBySupplier[String(supplier.id)] || { engagement: 0, depense: 0 };
+      const totalDepense = (Number(supplier.depenseActuelle) || 0) + impact.depense;
+      const totalEngagement = (Number(supplier.engagement) || 0) + impact.engagement;
+      const disponible = calculateAvailable(supplier.budgetAnnuel, totalDepense, totalEngagement);
+      const utilisation = calculateUsageRate(supplier.budgetAnnuel, totalDepense, totalEngagement);
+      return { ...supplier, _totalDepense: totalDepense, _totalEngagement: totalEngagement, _disponible: disponible, _utilisation: utilisation };
+    });
+  }, [suppliers, orderImpactBySupplier]);
+
+  // Tri et filtrage
+  const { processedData, toggleSort, SortIcon, FilterInput, hasActiveFilters, clearFilters } = useTableControls(enrichedSuppliers, {
+    numericColumns: ['budgetAnnuel', 'depenseActuelle', 'engagement', '_disponible', '_utilisation', '_totalDepense', '_totalEngagement'],
+  });
 
   const handleDeleteClick = useCallback((supplier) => {
     setDeleteConfirm({ isOpen: true, supplier });
@@ -85,6 +103,18 @@ export const OpexTable = ({ suppliers, totals, orders = [], onEdit, onDelete, on
           >
             <span className="hidden sm:inline">Colonnes</span>
           </Button>
+          {hasActiveFilters && (
+            <Button
+              variant="outline"
+              size="sm"
+              icon={<FilterX size={14} />}
+              onClick={clearFilters}
+              className="flex-1 sm:flex-none"
+              title="Effacer tous les filtres"
+            >
+              <span className="hidden sm:inline">Effacer filtres</span>
+            </Button>
+          )}
           {permissions.canDownloadTemplate && (
             <Button
               variant="secondary"
@@ -175,56 +205,55 @@ export const OpexTable = ({ suppliers, totals, orders = [], onEdit, onDelete, on
         <table className="w-full" style={{ tableLayout: 'fixed' }}>
           <thead>
             <tr className="bg-gray-50 border-b">
-              {col('supplier') && <th className={`${thBase} text-left`} {...getHeaderProps('supplier')}>Fournisseur<ResizeHandle columnKey="supplier" /></th>}
-              {col('category') && <th className={`${thBase} text-left`} {...getHeaderProps('category')}>Catégorie<ResizeHandle columnKey="category" /></th>}
-              {col('budgetAnnuel') && <th className={`${thBase} text-right`} {...getHeaderProps('budgetAnnuel')}>Budget annuel<ResizeHandle columnKey="budgetAnnuel" /></th>}
-              {col('depenseActuelle') && <th className={`${thBase} text-right`} {...getHeaderProps('depenseActuelle')}>Dépensé<ResizeHandle columnKey="depenseActuelle" /></th>}
-              {col('engagement') && <th className={`${thBase} text-right`} {...getHeaderProps('engagement')}>Engagé<ResizeHandle columnKey="engagement" /></th>}
-              {col('disponible') && <th className={`${thBase} text-right`} {...getHeaderProps('disponible')}>Disponible<ResizeHandle columnKey="disponible" /></th>}
-              {col('utilisation') && <th className={`${thBase} text-center`} {...getHeaderProps('utilisation')}>Utilisation<ResizeHandle columnKey="utilisation" /></th>}
-              {col('notes') && <th className={`${thBase} text-left`} {...getHeaderProps('notes')}>Notes<ResizeHandle columnKey="notes" /></th>}
+              {col('supplier') && <th className={`${thBase} text-left cursor-pointer select-none`} {...getHeaderProps('supplier')} onClick={() => toggleSort('supplier')}>Fournisseur<SortIcon columnKey="supplier" /><ResizeHandle columnKey="supplier" /></th>}
+              {col('category') && <th className={`${thBase} text-left cursor-pointer select-none`} {...getHeaderProps('category')} onClick={() => toggleSort('category')}>Catégorie<SortIcon columnKey="category" /><ResizeHandle columnKey="category" /></th>}
+              {col('budgetAnnuel') && <th className={`${thBase} text-right cursor-pointer select-none`} {...getHeaderProps('budgetAnnuel')} onClick={() => toggleSort('budgetAnnuel')}>Budget annuel<SortIcon columnKey="budgetAnnuel" /><ResizeHandle columnKey="budgetAnnuel" /></th>}
+              {col('depenseActuelle') && <th className={`${thBase} text-right cursor-pointer select-none`} {...getHeaderProps('depenseActuelle')} onClick={() => toggleSort('_totalDepense')}>Dépensé<SortIcon columnKey="_totalDepense" /><ResizeHandle columnKey="depenseActuelle" /></th>}
+              {col('engagement') && <th className={`${thBase} text-right cursor-pointer select-none`} {...getHeaderProps('engagement')} onClick={() => toggleSort('_totalEngagement')}>Engagé<SortIcon columnKey="_totalEngagement" /><ResizeHandle columnKey="engagement" /></th>}
+              {col('disponible') && <th className={`${thBase} text-right cursor-pointer select-none`} {...getHeaderProps('disponible')} onClick={() => toggleSort('_disponible')}>Disponible<SortIcon columnKey="_disponible" /><ResizeHandle columnKey="disponible" /></th>}
+              {col('utilisation') && <th className={`${thBase} text-center cursor-pointer select-none`} {...getHeaderProps('utilisation')} onClick={() => toggleSort('_utilisation')}>Utilisation<SortIcon columnKey="_utilisation" /><ResizeHandle columnKey="utilisation" /></th>}
+              {col('notes') && <th className={`${thBase} text-left cursor-pointer select-none`} {...getHeaderProps('notes')} onClick={() => toggleSort('notes')}>Notes<SortIcon columnKey="notes" /><ResizeHandle columnKey="notes" /></th>}
               {customColumns.map(column => (
-                <th key={column.id} className={`${thBase} text-left`} {...getHeaderProps(column.id)}>
-                  {column.name}
+                <th key={column.id} className={`${thBase} text-left cursor-pointer select-none`} {...getHeaderProps(column.id)} onClick={() => toggleSort(column.id)}>
+                  {column.name}<SortIcon columnKey={column.id} />
                   <ResizeHandle columnKey={column.id} />
                 </th>
               ))}
               {col('actions') && <th className={`${thBase} text-center`} {...getHeaderProps('actions')}>Actions</th>}
             </tr>
+            <tr className="bg-white border-b">
+              {col('supplier') && <th className="px-1 py-1" {...getCellProps('supplier')}><FilterInput columnKey="supplier" placeholder="Fournisseur..." /></th>}
+              {col('category') && <th className="px-1 py-1" {...getCellProps('category')}><FilterInput columnKey="category" placeholder="Catégorie..." /></th>}
+              {col('budgetAnnuel') && <th className="px-1 py-1" {...getCellProps('budgetAnnuel')}></th>}
+              {col('depenseActuelle') && <th className="px-1 py-1" {...getCellProps('depenseActuelle')}></th>}
+              {col('engagement') && <th className="px-1 py-1" {...getCellProps('engagement')}></th>}
+              {col('disponible') && <th className="px-1 py-1" {...getCellProps('disponible')}></th>}
+              {col('utilisation') && <th className="px-1 py-1" {...getCellProps('utilisation')}></th>}
+              {col('notes') && <th className="px-1 py-1" {...getCellProps('notes')}><FilterInput columnKey="notes" placeholder="Notes..." /></th>}
+              {customColumns.map(column => (
+                <th key={column.id} className="px-1 py-1" {...getCellProps(column.id)}><FilterInput columnKey={column.id} placeholder={`${column.name}...`} /></th>
+              ))}
+              {col('actions') && <th className="px-1 py-1" {...getCellProps('actions')}></th>}
+            </tr>
           </thead>
           <tbody>
-            {suppliers.map((supplier) => {
-              const impact = orderImpactBySupplier[String(supplier.id)] || { engagement: 0, depense: 0 };
-              const totalDepense = (Number(supplier.depenseActuelle) || 0) + impact.depense;
-              const totalEngagement = (Number(supplier.engagement) || 0) + impact.engagement;
-              const disponible = calculateAvailable(
-                supplier.budgetAnnuel,
-                totalDepense,
-                totalEngagement
-              );
-              const utilisation = calculateUsageRate(
-                supplier.budgetAnnuel,
-                totalDepense,
-                totalEngagement
-              );
-
-              return (
+            {processedData.map((supplier) => (
                 <tr key={supplier.id} className="border-b hover:bg-gray-50">
                   {col('supplier') && <td className={`${tdBase} font-medium text-gray-900`} {...getCellProps('supplier')}>{supplier.supplier}</td>}
                   {col('category') && <td className={`${tdBase} text-gray-700`} {...getCellProps('category')}>{supplier.category}</td>}
                   {col('budgetAnnuel') && <td className={`${tdBase} text-right text-gray-900`} {...getCellProps('budgetAnnuel')}>{formatCurrency(supplier.budgetAnnuel)}</td>}
-                  {col('depenseActuelle') && <td className={`${tdBase} text-right text-orange-600`} {...getCellProps('depenseActuelle')}>{formatCurrency(totalDepense)}</td>}
-                  {col('engagement') && <td className={`${tdBase} text-right text-yellow-600`} {...getCellProps('engagement')}>{formatCurrency(totalEngagement)}</td>}
+                  {col('depenseActuelle') && <td className={`${tdBase} text-right text-orange-600`} {...getCellProps('depenseActuelle')}>{formatCurrency(supplier._totalDepense)}</td>}
+                  {col('engagement') && <td className={`${tdBase} text-right text-yellow-600`} {...getCellProps('engagement')}>{formatCurrency(supplier._totalEngagement)}</td>}
                   {col('disponible') && (
-                    <td className={`${tdBase} text-right font-semibold ${disponible < 0 ? 'text-red-600' : 'text-green-600'}`} {...getCellProps('disponible')}>
-                      {formatCurrency(disponible)}
+                    <td className={`${tdBase} text-right font-semibold ${supplier._disponible < 0 ? 'text-red-600' : 'text-green-600'}`} {...getCellProps('disponible')}>
+                      {formatCurrency(supplier._disponible)}
                     </td>
                   )}
                   {col('utilisation') && (
                     <td className={tdBase} {...getCellProps('utilisation')}>
                       <div className="flex flex-col items-center">
-                        <span className="text-xs sm:text-sm font-semibold mb-1">{utilisation.toFixed(1)}%</span>
-                        <ProgressBar value={utilisation} showLabel={false} size="sm" warningThreshold={settings.rules.warningThreshold} criticalThreshold={settings.rules.criticalThreshold} />
+                        <span className="text-xs sm:text-sm font-semibold mb-1">{supplier._utilisation.toFixed(1)}%</span>
+                        <ProgressBar value={supplier._utilisation} showLabel={false} size="sm" warningThreshold={settings.rules.warningThreshold} criticalThreshold={settings.rules.criticalThreshold} />
                       </div>
                     </td>
                   )}
@@ -251,8 +280,7 @@ export const OpexTable = ({ suppliers, totals, orders = [], onEdit, onDelete, on
                     </td>
                   )}
                 </tr>
-              );
-            })}
+            ))}
           </tbody>
           <tfoot className="bg-gray-100 font-semibold">
             <tr>

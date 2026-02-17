@@ -2,8 +2,8 @@
  * Composant CapexTable - Tableau des projets CAPEX
  */
 
-import React, { useState, useCallback } from 'react';
-import { Edit2, Trash2, Download, Plus, FileUp, FileDown, RotateCcw } from 'lucide-react';
+import React, { useState, useCallback, useMemo } from 'react';
+import { Edit2, Trash2, Download, Plus, FileUp, FileDown, RotateCcw, FilterX } from 'lucide-react';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { calculateAvailable, calculateUsageRate } from '../../utils/calculations';
 import { computeOrderImpactByParent } from '../../utils/orderCalculations';
@@ -12,6 +12,7 @@ import { importCapexFromCSV } from '../../utils/importUtils';
 import { usePermissions } from '../../contexts/PermissionsContext';
 import { useSettings } from '../../contexts/SettingsContext';
 import { useColumnResize } from '../../hooks/useColumnResize.jsx';
+import { useTableControls } from '../../hooks/useTableControls.jsx';
 import { STATUS_COLORS, ENVELOPPE_COLORS } from '../../constants/budgetConstants';
 import { Button } from '../common/Button';
 import { ProgressBar } from '../common/ProgressBar';
@@ -46,6 +47,24 @@ export const CapexTable = ({ projects, totals, orders = [], onEdit, onDelete, on
 
   // Impact des commandes par projet
   const orderImpactByProject = computeOrderImpactByParent(orders);
+
+  // Enrichir les données avec les calculs pour permettre le tri sur colonnes calculées
+  const enrichedProjects = useMemo(() => {
+    return projects.map(project => {
+      const impact = orderImpactByProject[String(project.id)] || { engagement: 0, depense: 0 };
+      const totalDepense = (Number(project.depense) || 0) + impact.depense;
+      const totalEngagement = (Number(project.engagement) || 0) + impact.engagement;
+      const disponible = calculateAvailable(project.budgetTotal, totalDepense, totalEngagement);
+      const utilisation = calculateUsageRate(project.budgetTotal, totalDepense, totalEngagement);
+      return { ...project, _totalDepense: totalDepense, _totalEngagement: totalEngagement, _disponible: disponible, _utilisation: utilisation };
+    });
+  }, [projects, orderImpactByProject]);
+
+  // Tri et filtrage
+  const { processedData, toggleSort, SortIcon, FilterInput, hasActiveFilters, clearFilters } = useTableControls(enrichedProjects, {
+    numericColumns: ['budgetTotal', 'depense', 'engagement', '_disponible', '_utilisation', '_totalDepense', '_totalEngagement'],
+    dateColumns: ['dateDebut', 'dateFin'],
+  });
 
   const handleDeleteClick = useCallback((project) => {
     setDeleteConfirm({ isOpen: true, project });
@@ -88,6 +107,18 @@ export const CapexTable = ({ projects, totals, orders = [], onEdit, onDelete, on
           >
             <span className="hidden sm:inline">Colonnes</span>
           </Button>
+          {hasActiveFilters && (
+            <Button
+              variant="outline"
+              size="sm"
+              icon={<FilterX size={14} />}
+              onClick={clearFilters}
+              className="flex-1 sm:flex-none"
+              title="Effacer tous les filtres"
+            >
+              <span className="hidden sm:inline">Effacer filtres</span>
+            </Button>
+          )}
           {permissions.canDownloadTemplate && (
             <Button
               variant="secondary"
@@ -187,42 +218,43 @@ export const CapexTable = ({ projects, totals, orders = [], onEdit, onDelete, on
         <table className="w-full" style={{ tableLayout: 'fixed' }}>
           <thead>
             <tr className="bg-gray-50 border-b">
-              <th className={`${thBase} text-left`} {...getHeaderProps('enveloppe')}>Enveloppe<ResizeHandle columnKey="enveloppe" /></th>
-              <th className={`${thBase} text-left`} {...getHeaderProps('projet')}>Projet<ResizeHandle columnKey="projet" /></th>
-              <th className={`${thBase} text-center`} {...getHeaderProps('statut')}>Statut<ResizeHandle columnKey="statut" /></th>
-              <th className={`${thBase} text-right`} {...getHeaderProps('budget')}>Budget total<ResizeHandle columnKey="budget" /></th>
-              <th className={`${thBase} text-right`} {...getHeaderProps('depense')}>Dépensé<ResizeHandle columnKey="depense" /></th>
-              <th className={`${thBase} text-right`} {...getHeaderProps('engagement')}>Engagé<ResizeHandle columnKey="engagement" /></th>
-              <th className={`${thBase} text-right`} {...getHeaderProps('disponible')}>Disponible<ResizeHandle columnKey="disponible" /></th>
-              <th className={`${thBase} text-center`} {...getHeaderProps('utilisation')}>Utilisation<ResizeHandle columnKey="utilisation" /></th>
-              <th className={`${thBase} text-center`} {...getHeaderProps('periode')}>Période<ResizeHandle columnKey="periode" /></th>
-              <th className={`${thBase} text-left`} {...getHeaderProps('notes')}>Notes<ResizeHandle columnKey="notes" /></th>
+              <th className={`${thBase} text-left cursor-pointer select-none`} {...getHeaderProps('enveloppe')} onClick={() => toggleSort('enveloppe')}>Enveloppe<SortIcon columnKey="enveloppe" /><ResizeHandle columnKey="enveloppe" /></th>
+              <th className={`${thBase} text-left cursor-pointer select-none`} {...getHeaderProps('projet')} onClick={() => toggleSort('project')}>Projet<SortIcon columnKey="project" /><ResizeHandle columnKey="projet" /></th>
+              <th className={`${thBase} text-center cursor-pointer select-none`} {...getHeaderProps('statut')} onClick={() => toggleSort('status')}>Statut<SortIcon columnKey="status" /><ResizeHandle columnKey="statut" /></th>
+              <th className={`${thBase} text-right cursor-pointer select-none`} {...getHeaderProps('budget')} onClick={() => toggleSort('budgetTotal')}>Budget total<SortIcon columnKey="budgetTotal" /><ResizeHandle columnKey="budget" /></th>
+              <th className={`${thBase} text-right cursor-pointer select-none`} {...getHeaderProps('depense')} onClick={() => toggleSort('_totalDepense')}>Dépensé<SortIcon columnKey="_totalDepense" /><ResizeHandle columnKey="depense" /></th>
+              <th className={`${thBase} text-right cursor-pointer select-none`} {...getHeaderProps('engagement')} onClick={() => toggleSort('_totalEngagement')}>Engagé<SortIcon columnKey="_totalEngagement" /><ResizeHandle columnKey="engagement" /></th>
+              <th className={`${thBase} text-right cursor-pointer select-none`} {...getHeaderProps('disponible')} onClick={() => toggleSort('_disponible')}>Disponible<SortIcon columnKey="_disponible" /><ResizeHandle columnKey="disponible" /></th>
+              <th className={`${thBase} text-center cursor-pointer select-none`} {...getHeaderProps('utilisation')} onClick={() => toggleSort('_utilisation')}>Utilisation<SortIcon columnKey="_utilisation" /><ResizeHandle columnKey="utilisation" /></th>
+              <th className={`${thBase} text-center cursor-pointer select-none`} {...getHeaderProps('periode')} onClick={() => toggleSort('dateDebut')}>Période<SortIcon columnKey="dateDebut" /><ResizeHandle columnKey="periode" /></th>
+              <th className={`${thBase} text-left cursor-pointer select-none`} {...getHeaderProps('notes')} onClick={() => toggleSort('notes')}>Notes<SortIcon columnKey="notes" /><ResizeHandle columnKey="notes" /></th>
               {customColumns.map(column => (
-                <th key={column.id} className={`${thBase} text-left`} {...getHeaderProps(column.id)}>
-                  {column.name}
+                <th key={column.id} className={`${thBase} text-left cursor-pointer select-none`} {...getHeaderProps(column.id)} onClick={() => toggleSort(column.id)}>
+                  {column.name}<SortIcon columnKey={column.id} />
                   <ResizeHandle columnKey={column.id} />
                 </th>
               ))}
               <th className={`${thBase} text-center`} {...getHeaderProps('actions')}>Actions</th>
             </tr>
+            <tr className="bg-white border-b">
+              <th className="px-1 py-1" {...getCellProps('enveloppe')}><FilterInput columnKey="enveloppe" placeholder="Enveloppe..." /></th>
+              <th className="px-1 py-1" {...getCellProps('projet')}><FilterInput columnKey="project" placeholder="Projet..." /></th>
+              <th className="px-1 py-1" {...getCellProps('statut')}><FilterInput columnKey="status" placeholder="Statut..." /></th>
+              <th className="px-1 py-1" {...getCellProps('budget')}></th>
+              <th className="px-1 py-1" {...getCellProps('depense')}></th>
+              <th className="px-1 py-1" {...getCellProps('engagement')}></th>
+              <th className="px-1 py-1" {...getCellProps('disponible')}></th>
+              <th className="px-1 py-1" {...getCellProps('utilisation')}></th>
+              <th className="px-1 py-1" {...getCellProps('periode')}></th>
+              <th className="px-1 py-1" {...getCellProps('notes')}><FilterInput columnKey="notes" placeholder="Notes..." /></th>
+              {customColumns.map(column => (
+                <th key={column.id} className="px-1 py-1" {...getCellProps(column.id)}><FilterInput columnKey={column.id} placeholder={`${column.name}...`} /></th>
+              ))}
+              <th className="px-1 py-1" {...getCellProps('actions')}></th>
+            </tr>
           </thead>
           <tbody>
-            {projects.map((project) => {
-              const impact = orderImpactByProject[String(project.id)] || { engagement: 0, depense: 0 };
-              const totalDepense = (Number(project.depense) || 0) + impact.depense;
-              const totalEngagement = (Number(project.engagement) || 0) + impact.engagement;
-              const disponible = calculateAvailable(
-                project.budgetTotal,
-                totalDepense,
-                totalEngagement
-              );
-              const utilisation = calculateUsageRate(
-                project.budgetTotal,
-                totalDepense,
-                totalEngagement
-              );
-
-              return (
+            {processedData.map((project) => (
                 <tr key={project.id} className="border-b hover:bg-gray-50">
                   <td className={tdBase} {...getCellProps('enveloppe')}>
                     <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${ENVELOPPE_COLORS[project.enveloppe] || ENVELOPPE_COLORS['Autre']}`}>
@@ -239,18 +271,18 @@ export const CapexTable = ({ projects, totals, orders = [], onEdit, onDelete, on
                     {formatCurrency(project.budgetTotal)}
                   </td>
                   <td className={`${tdBase} text-right text-orange-600`} {...getCellProps('depense')}>
-                    {formatCurrency(totalDepense)}
+                    {formatCurrency(project._totalDepense)}
                   </td>
                   <td className={`${tdBase} text-right text-yellow-600`} {...getCellProps('engagement')}>
-                    {formatCurrency(totalEngagement)}
+                    {formatCurrency(project._totalEngagement)}
                   </td>
-                  <td className={`${tdBase} text-right font-semibold ${disponible < 0 ? 'text-red-600' : 'text-green-600'}`} {...getCellProps('disponible')}>
-                    {formatCurrency(disponible)}
+                  <td className={`${tdBase} text-right font-semibold ${project._disponible < 0 ? 'text-red-600' : 'text-green-600'}`} {...getCellProps('disponible')}>
+                    {formatCurrency(project._disponible)}
                   </td>
                   <td className={tdBase} {...getCellProps('utilisation')}>
                     <div className="flex flex-col items-center">
-                      <span className="text-xs sm:text-sm font-semibold mb-1">{utilisation.toFixed(1)}%</span>
-                      <ProgressBar value={utilisation} showLabel={false} size="sm" warningThreshold={settings.rules.warningThreshold} criticalThreshold={settings.rules.criticalThreshold} />
+                      <span className="text-xs sm:text-sm font-semibold mb-1">{project._utilisation.toFixed(1)}%</span>
+                      <ProgressBar value={project._utilisation} showLabel={false} size="sm" warningThreshold={settings.rules.warningThreshold} criticalThreshold={settings.rules.criticalThreshold} />
                     </div>
                   </td>
                   <td className={`${tdBase} text-center text-gray-700`} {...getCellProps('periode')}>
@@ -285,8 +317,7 @@ export const CapexTable = ({ projects, totals, orders = [], onEdit, onDelete, on
                     </div>
                   </td>
                 </tr>
-              );
-            })}
+            ))}
           </tbody>
           <tfoot className="bg-gray-100 font-semibold">
             <tr>

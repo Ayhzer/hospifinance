@@ -3,7 +3,7 @@
  * Tableau de bord financier DSI - Version 3.0
  */
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { DollarSign, Server, LogOut, Settings } from 'lucide-react';
 
 // Contextes
@@ -62,14 +62,11 @@ const HospitalITFinanceDashboard = () => {
   const [editingCapexOrder, setEditingCapexOrder] = useState(null);
 
   // Refs pour éviter les closures stale dans les handlers async
-  const editingOpexRef = useRef(editingOpex);
-  const editingCapexRef = useRef(editingCapex);
-  const editingOpexOrderRef = useRef(editingOpexOrder);
-  const editingCapexOrderRef = useRef(editingCapexOrder);
-  useEffect(() => { editingOpexRef.current = editingOpex; }, [editingOpex]);
-  useEffect(() => { editingCapexRef.current = editingCapex; }, [editingCapex]);
-  useEffect(() => { editingOpexOrderRef.current = editingOpexOrder; }, [editingOpexOrder]);
-  useEffect(() => { editingCapexOrderRef.current = editingCapexOrder; }, [editingCapexOrder]);
+  // Synchronisés immédiatement dans les handlers add/edit (pas via useEffect)
+  const editingOpexRef = useRef(null);
+  const editingCapexRef = useRef(null);
+  const editingOpexOrderRef = useRef(null);
+  const editingCapexOrderRef = useRef(null);
 
   // Hooks de données OPEX
   const {
@@ -123,11 +120,13 @@ const HospitalITFinanceDashboard = () => {
 
   // Handlers OPEX
   const handleAddOpex = useCallback(() => {
+    editingOpexRef.current = null;
     setEditingOpex(null);
     setShowOpexModal(true);
   }, []);
 
   const handleEditOpex = useCallback((supplier) => {
+    editingOpexRef.current = supplier;
     setEditingOpex(supplier);
     setShowOpexModal(true);
   }, []);
@@ -163,11 +162,13 @@ const HospitalITFinanceDashboard = () => {
 
   // Handlers CAPEX
   const handleAddCapex = useCallback(() => {
+    editingCapexRef.current = null;
     setEditingCapex(null);
     setShowCapexModal(true);
   }, []);
 
   const handleEditCapex = useCallback((project) => {
+    editingCapexRef.current = project;
     setEditingCapex(project);
     setShowCapexModal(true);
   }, []);
@@ -203,11 +204,13 @@ const HospitalITFinanceDashboard = () => {
 
   // Handlers Commandes OPEX
   const handleAddOpexOrder = useCallback(() => {
+    editingOpexOrderRef.current = null;
     setEditingOpexOrder(null);
     setShowOpexOrderModal(true);
   }, []);
 
   const handleEditOpexOrder = useCallback((order) => {
+    editingOpexOrderRef.current = order;
     setEditingOpexOrder(order);
     setShowOpexOrderModal(true);
   }, []);
@@ -236,11 +239,13 @@ const HospitalITFinanceDashboard = () => {
 
   // Handlers Commandes CAPEX
   const handleAddCapexOrder = useCallback(() => {
+    editingCapexOrderRef.current = null;
     setEditingCapexOrder(null);
     setShowCapexOrderModal(true);
   }, []);
 
   const handleEditCapexOrder = useCallback((order) => {
+    editingCapexOrderRef.current = order;
     setEditingCapexOrder(order);
     setShowCapexOrderModal(true);
   }, []);

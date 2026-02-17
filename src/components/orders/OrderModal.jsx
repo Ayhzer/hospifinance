@@ -50,9 +50,9 @@ export const OrderModal = ({ isOpen, onClose, onSave, editingOrder, parentItems,
     setFormData(prev => ({ ...prev, [field]: e.target.value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    onSave(formData);
+    await onSave(formData);
   };
 
   const statusOptions = ORDER_STATUS_LIST.map(s => ({ value: s, label: s }));

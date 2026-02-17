@@ -56,9 +56,8 @@ export const CapexModal = ({ isOpen, onClose, onSave, editingProject }) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleSubmit = () => {
-    onSave(formData);
-    setFormData(EMPTY_FORM);
+  const handleSubmit = async () => {
+    await onSave(formData);
   };
 
   return (

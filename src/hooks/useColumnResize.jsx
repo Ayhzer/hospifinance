@@ -103,7 +103,7 @@ export const useColumnResize = (tableId, defaultWidths = {}) => {
     <div
       onMouseDown={(e) => onResizeStart(columnKey, e)}
       onDoubleClick={() => onDoubleClick(columnKey)}
-      className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-400 active:bg-blue-500 z-10"
+      className="absolute right-0 top-1 bottom-1 w-[3px] cursor-col-resize bg-gray-300 hover:bg-blue-500 active:bg-blue-600 rounded-full z-10 opacity-60 hover:opacity-100 transition-opacity"
       title="Glisser pour redimensionner, double-clic pour réinitialiser"
     />
   ), [onResizeStart, onDoubleClick]);

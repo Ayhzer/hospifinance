@@ -123,10 +123,10 @@ const HospitalITFinanceDashboard = () => {
   }, []);
 
   const handleSaveOpex = useCallback(
-    (data) => {
+    async (data) => {
       const result = editingOpex
-        ? updateSupplier(editingOpex.id, data)
-        : addSupplier(data);
+        ? await updateSupplier(editingOpex.id, data)
+        : await addSupplier(data);
 
       if (result.success) {
         setShowOpexModal(false);
@@ -160,10 +160,10 @@ const HospitalITFinanceDashboard = () => {
   }, []);
 
   const handleSaveCapex = useCallback(
-    (data) => {
+    async (data) => {
       const result = editingCapex
-        ? updateProject(editingCapex.id, data)
-        : addProject(data);
+        ? await updateProject(editingCapex.id, data)
+        : await addProject(data);
 
       if (result.success) {
         setShowCapexModal(false);
@@ -197,10 +197,10 @@ const HospitalITFinanceDashboard = () => {
   }, []);
 
   const handleSaveOpexOrder = useCallback(
-    (data) => {
+    async (data) => {
       const result = editingOpexOrder
-        ? updateOpexOrder(editingOpexOrder.id, data)
-        : addOpexOrder(data);
+        ? await updateOpexOrder(editingOpexOrder.id, data)
+        : await addOpexOrder(data);
 
       if (result.success) {
         setShowOpexOrderModal(false);
@@ -227,10 +227,10 @@ const HospitalITFinanceDashboard = () => {
   }, []);
 
   const handleSaveCapexOrder = useCallback(
-    (data) => {
+    async (data) => {
       const result = editingCapexOrder
-        ? updateCapexOrder(editingCapexOrder.id, data)
-        : addCapexOrder(data);
+        ? await updateCapexOrder(editingCapexOrder.id, data)
+        : await addCapexOrder(data);
 
       if (result.success) {
         setShowCapexOrderModal(false);

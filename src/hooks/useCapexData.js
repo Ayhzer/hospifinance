@@ -95,7 +95,11 @@ export const useCapexData = () => {
     if (USE_API) {
       try {
         const newProject = await api.createCapex(projectData);
-        setProjects(prev => [...prev, newProject]);
+        setProjects(prev => {
+          // Guard anti-doublon : ne pas ajouter si l'id existe déjà
+          if (prev.some(p => String(p.id) === String(newProject.id))) return prev;
+          return [...prev, newProject];
+        });
         setError(null);
         return { success: true, data: newProject };
       } catch (err) {
@@ -118,7 +122,10 @@ export const useCapexData = () => {
         notes: sanitizeString(projectData.notes),
         ...customFields
       };
-      setProjects(prev => [...prev, newProject]);
+      setProjects(prev => {
+        if (prev.some(p => String(p.id) === String(newProject.id))) return prev;
+        return [...prev, newProject];
+      });
       setError(null);
       return { success: true, data: newProject };
     }

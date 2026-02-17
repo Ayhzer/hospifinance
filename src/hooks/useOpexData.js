@@ -97,7 +97,10 @@ export const useOpexData = () => {
     if (USE_API) {
       try {
         const newSupplier = await api.createOpex(supplierData);
-        setSuppliers(prev => [...prev, newSupplier]);
+        setSuppliers(prev => {
+          if (prev.some(s => String(s.id) === String(newSupplier.id))) return prev;
+          return [...prev, newSupplier];
+        });
         setError(null);
         return { success: true, data: newSupplier };
       } catch (err) {
@@ -117,7 +120,10 @@ export const useOpexData = () => {
         notes: sanitizeString(supplierData.notes),
         ...customFields
       };
-      setSuppliers(prev => [...prev, newSupplier]);
+      setSuppliers(prev => {
+        if (prev.some(s => String(s.id) === String(newSupplier.id))) return prev;
+        return [...prev, newSupplier];
+      });
       setError(null);
       return { success: true, data: newSupplier };
     }

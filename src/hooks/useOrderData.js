@@ -97,7 +97,10 @@ export const useOrderData = (type = 'opex') => {
       notes: sanitizeString(orderData.notes)
     };
 
-    setOrders(prev => [...prev, newOrder]);
+    setOrders(prev => {
+      if (prev.some(o => String(o.id) === String(newOrder.id))) return prev;
+      return [...prev, newOrder];
+    });
     setError(null);
     return { success: true, data: newOrder };
   }, []);
@@ -121,7 +124,10 @@ export const useOrderData = (type = 'opex') => {
       notes: sanitizeString(orderData.notes)
     };
 
-    setOrders(prev => prev.map(o => o.id === id ? updatedOrder : o));
+    setOrders(prev => {
+      const deduped = prev.filter((o, i, arr) => arr.findIndex(x => String(x.id) === String(o.id)) === i);
+      return deduped.map(o => String(o.id) === String(id) ? updatedOrder : o);
+    });
     setError(null);
     return { success: true, data: updatedOrder };
   }, []);

@@ -167,8 +167,8 @@ export const OpexTable = ({ suppliers, totals, orders = [], onEdit, onDelete, on
           <tbody>
             {suppliers.map((supplier) => {
               const impact = orderImpactBySupplier[String(supplier.id)] || { engagement: 0, depense: 0 };
-              const totalDepense = supplier.depenseActuelle + impact.depense;
-              const totalEngagement = supplier.engagement + impact.engagement;
+              const totalDepense = (Number(supplier.depenseActuelle) || 0) + impact.depense;
+              const totalEngagement = (Number(supplier.engagement) || 0) + impact.engagement;
               const disponible = calculateAvailable(
                 supplier.budgetAnnuel,
                 totalDepense,

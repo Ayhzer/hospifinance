@@ -190,9 +190,9 @@ export const useCapexData = () => {
     return projects
       .filter(p => p.enveloppe === enveloppe)
       .reduce((acc, p) => ({
-        budget: acc.budget + (p.budgetTotal || 0),
-        depense: acc.depense + (p.depense || 0),
-        engagement: acc.engagement + (p.engagement || 0),
+        budget: acc.budget + (Number(p.budgetTotal) || 0),
+        depense: acc.depense + (Number(p.depense) || 0),
+        engagement: acc.engagement + (Number(p.engagement) || 0),
         count: acc.count + 1
       }), { budget: 0, depense: 0, engagement: 0, count: 0 });
   }, [projects]);

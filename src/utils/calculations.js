@@ -10,7 +10,7 @@
  * @returns {number} Budget disponible
  */
 export const calculateAvailable = (budget, depense, engagement) => {
-  return budget - depense - engagement;
+  return (Number(budget) || 0) - (Number(depense) || 0) - (Number(engagement) || 0);
 };
 
 /**
@@ -21,8 +21,11 @@ export const calculateAvailable = (budget, depense, engagement) => {
  * @returns {number} Taux d'utilisation en pourcentage
  */
 export const calculateUsageRate = (budget, depense, engagement) => {
-  if (budget === 0) return 0;
-  return ((depense + engagement) / budget) * 100;
+  const b = Number(budget) || 0;
+  const d = Number(depense) || 0;
+  const e = Number(engagement) || 0;
+  if (b === 0) return 0;
+  return ((d + e) / b) * 100;
 };
 
 /**
@@ -37,9 +40,9 @@ export const calculateTotals = (items, keys = {
   depense: 'depenseActuelle',
   engagement: 'engagement'
 }, orderImpact = null) => {
-  const budget = items.reduce((sum, item) => sum + (item[keys.budget] || 0), 0);
-  let depense = items.reduce((sum, item) => sum + (item[keys.depense] || 0), 0);
-  let engagement = items.reduce((sum, item) => sum + (item[keys.engagement] || 0), 0);
+  const budget = items.reduce((sum, item) => sum + (Number(item[keys.budget]) || 0), 0);
+  let depense = items.reduce((sum, item) => sum + (Number(item[keys.depense]) || 0), 0);
+  let engagement = items.reduce((sum, item) => sum + (Number(item[keys.engagement]) || 0), 0);
 
   // Ajouter l'impact des commandes
   if (orderImpact) {

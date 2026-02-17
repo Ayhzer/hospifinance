@@ -178,8 +178,8 @@ export const CapexTable = ({ projects, totals, orders = [], onEdit, onDelete, on
           <tbody>
             {projects.map((project) => {
               const impact = orderImpactByProject[String(project.id)] || { engagement: 0, depense: 0 };
-              const totalDepense = project.depense + impact.depense;
-              const totalEngagement = project.engagement + impact.engagement;
+              const totalDepense = (Number(project.depense) || 0) + impact.depense;
+              const totalEngagement = (Number(project.engagement) || 0) + impact.engagement;
               const disponible = calculateAvailable(
                 project.budgetTotal,
                 totalDepense,

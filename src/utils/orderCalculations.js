@@ -16,9 +16,9 @@ export const computeOrderImpact = (orders) => {
   orders.forEach(order => {
     const impact = ORDER_IMPACT[order.status];
     if (impact === 'engagement') {
-      engagement += order.montant || 0;
+      engagement += Number(order.montant) || 0;
     } else if (impact === 'depense') {
-      depense += order.montant || 0;
+      depense += Number(order.montant) || 0;
     }
   });
 
@@ -42,9 +42,9 @@ export const computeOrderImpactByParent = (orders) => {
     }
 
     if (impact === 'engagement') {
-      byParent[order.parentId].engagement += order.montant || 0;
+      byParent[order.parentId].engagement += Number(order.montant) || 0;
     } else if (impact === 'depense') {
-      byParent[order.parentId].depense += order.montant || 0;
+      byParent[order.parentId].depense += Number(order.montant) || 0;
     }
   });
 

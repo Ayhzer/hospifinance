@@ -28,9 +28,21 @@ export const OpexModal = ({ isOpen, onClose, onSave, editingSupplier }) => {
 
   useEffect(() => {
     if (editingSupplier) {
-      setFormData(editingSupplier);
+      // Mapper vers le format formulaire : strings pour les numériques, exclure champs parasites
+      const mapped = {
+        supplier:        editingSupplier.supplier ?? '',
+        category:        editingSupplier.category ?? '',
+        budgetAnnuel:    editingSupplier.budgetAnnuel != null ? String(editingSupplier.budgetAnnuel) : '',
+        depenseActuelle: editingSupplier.depenseActuelle != null ? String(editingSupplier.depenseActuelle) : '',
+        engagement:      editingSupplier.engagement != null ? String(editingSupplier.engagement) : '',
+        notes:           editingSupplier.notes ?? '',
+      };
+      // Inclure les champs custom
+      customColumns.forEach(col => {
+        mapped[col.id] = editingSupplier[col.id] != null ? String(editingSupplier[col.id]) : '';
+      });
+      setFormData(mapped);
     } else {
-      // Initialiser les champs custom à vide
       const emptyForm = { ...EMPTY_FORM };
       customColumns.forEach(col => {
         emptyForm[col.id] = '';

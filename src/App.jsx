@@ -131,9 +131,11 @@ const HospitalITFinanceDashboard = () => {
       if (result.success) {
         setShowOpexModal(false);
         setEditingOpex(null);
+      } else {
+        setOpexError(result.errors ? result.errors.join(', ') : 'Erreur lors de la sauvegarde');
       }
     },
-    [editingOpex, addSupplier, updateSupplier]
+    [editingOpex, addSupplier, updateSupplier, setOpexError]
   );
 
   const handleDeleteOpex = useCallback(
@@ -168,9 +170,11 @@ const HospitalITFinanceDashboard = () => {
       if (result.success) {
         setShowCapexModal(false);
         setEditingCapex(null);
+      } else {
+        setCapexError(result.errors ? result.errors.join(', ') : 'Erreur lors de la sauvegarde');
       }
     },
-    [editingCapex, addProject, updateProject]
+    [editingCapex, addProject, updateProject, setCapexError]
   );
 
   const handleDeleteCapex = useCallback(
@@ -205,9 +209,11 @@ const HospitalITFinanceDashboard = () => {
       if (result.success) {
         setShowOpexOrderModal(false);
         setEditingOpexOrder(null);
+      } else {
+        setOpexOrdersError(result.errors ? result.errors.join(', ') : 'Erreur lors de la sauvegarde');
       }
     },
-    [editingOpexOrder, addOpexOrder, updateOpexOrder]
+    [editingOpexOrder, addOpexOrder, updateOpexOrder, setOpexOrdersError]
   );
 
   const handleDeleteOpexOrder = useCallback(
@@ -235,9 +241,11 @@ const HospitalITFinanceDashboard = () => {
       if (result.success) {
         setShowCapexOrderModal(false);
         setEditingCapexOrder(null);
+      } else {
+        setCapexOrdersError(result.errors ? result.errors.join(', ') : 'Erreur lors de la sauvegarde');
       }
     },
-    [editingCapexOrder, addCapexOrder, updateCapexOrder]
+    [editingCapexOrder, addCapexOrder, updateCapexOrder, setCapexOrdersError]
   );
 
   const handleDeleteCapexOrder = useCallback(

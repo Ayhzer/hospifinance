@@ -41,9 +41,24 @@ export const CapexModal = ({ isOpen, onClose, onSave, editingProject }) => {
 
   useEffect(() => {
     if (editingProject) {
-      setFormData(editingProject);
+      // Mapper vers le format formulaire : strings pour les numériques, exclure champs parasites
+      const mapped = {
+        enveloppe:   editingProject.enveloppe ?? EMPTY_FORM.enveloppe,
+        project:     editingProject.project ?? '',
+        budgetTotal: editingProject.budgetTotal != null ? String(editingProject.budgetTotal) : '',
+        depense:     editingProject.depense != null ? String(editingProject.depense) : '',
+        engagement:  editingProject.engagement != null ? String(editingProject.engagement) : '',
+        dateDebut:   editingProject.dateDebut ?? '',
+        dateFin:     editingProject.dateFin ?? '',
+        status:      editingProject.status ?? 'Planifié',
+        notes:       editingProject.notes ?? '',
+      };
+      // Inclure les champs custom
+      customColumns.forEach(col => {
+        mapped[col.id] = editingProject[col.id] != null ? String(editingProject[col.id]) : '';
+      });
+      setFormData(mapped);
     } else {
-      // Initialiser les champs custom à vide
       const emptyForm = { ...EMPTY_FORM };
       customColumns.forEach(col => {
         emptyForm[col.id] = '';

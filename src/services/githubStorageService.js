@@ -45,7 +45,11 @@ const shaCache = {};
 // ==================== Configuration ====================
 
 export const loadGithubConfig = () => {
-  // 1) localStorage (surcharge manuelle via UI)
+  // 1) Variables d'environnement Vite (priorité — config uniforme sur tous les navigateurs)
+  const envConfig = getEnvConfig();
+  if (envConfig) return envConfig;
+
+  // 2) localStorage (fallback — uniquement si pas d'env vars)
   try {
     const raw = localStorage.getItem(GITHUB_CONFIG_KEY);
     if (raw) {
@@ -56,8 +60,7 @@ export const loadGithubConfig = () => {
     }
   } catch { /* ignore */ }
 
-  // 2) Variables d'environnement Vite (configuration automatique)
-  return getEnvConfig();
+  return null;
 };
 
 export const saveGithubConfig = (config) => {

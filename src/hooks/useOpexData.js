@@ -212,5 +212,10 @@ export const useOpexData = () => {
     setError(null);
   }, []);
 
-  return { suppliers, loading, error, addSupplier, updateSupplier, deleteSupplier, resetToDefaults, setError };
+  const clearAll = useCallback(() => {
+    setSuppliers([]);
+    setError(null);
+  }, []);
+
+  return { suppliers, loading, error, addSupplier, updateSupplier, deleteSupplier, resetToDefaults, clearAll, setError };
 };

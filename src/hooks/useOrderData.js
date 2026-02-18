@@ -151,6 +151,11 @@ export const useOrderData = (type = 'opex') => {
     return { success: true };
   }, []);
 
+  const clearAll = useCallback(() => {
+    setOrders([]);
+    setError(null);
+  }, []);
+
   return {
     orders,
     loading,
@@ -158,6 +163,7 @@ export const useOrderData = (type = 'opex') => {
     addOrder,
     updateOrder,
     deleteOrder,
+    clearAll,
     setError
   };
 };

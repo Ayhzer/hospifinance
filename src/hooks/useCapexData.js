@@ -217,6 +217,11 @@ export const useCapexData = () => {
     setError(null);
   }, []);
 
+  const clearAll = useCallback(() => {
+    setProjects([]);
+    setError(null);
+  }, []);
+
   const calculateEnveloppeTotal = useCallback((enveloppe) => {
     return projects
       .filter(p => p.enveloppe === enveloppe)
@@ -232,5 +237,5 @@ export const useCapexData = () => {
     return Array.from(new Set(projects.map(p => p.enveloppe).filter(Boolean))).sort();
   }, [projects]);
 
-  return { projects, loading, error, addProject, updateProject, deleteProject, resetToDefaults, setError, calculateEnveloppeTotal, getUsedEnveloppes };
+  return { projects, loading, error, addProject, updateProject, deleteProject, resetToDefaults, clearAll, setError, calculateEnveloppeTotal, getUsedEnveloppes };
 };

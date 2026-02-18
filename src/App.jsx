@@ -76,6 +76,7 @@ const HospitalITFinanceDashboard = () => {
     addSupplier,
     updateSupplier,
     deleteSupplier,
+    clearAll: clearAllOpex,
     setError: setOpexError
   } = useOpexData();
 
@@ -89,6 +90,7 @@ const HospitalITFinanceDashboard = () => {
     deleteProject,
     calculateEnveloppeTotal,
     getUsedEnveloppes,
+    clearAll: clearAllCapex,
     setError: setCapexError
   } = useCapexData();
 
@@ -100,6 +102,7 @@ const HospitalITFinanceDashboard = () => {
     addOrder: addOpexOrder,
     updateOrder: updateOpexOrder,
     deleteOrder: deleteOpexOrder,
+    clearAll: clearAllOpexOrders,
     setError: setOpexOrdersError
   } = useOrderData('opex');
 
@@ -110,6 +113,7 @@ const HospitalITFinanceDashboard = () => {
     addOrder: addCapexOrder,
     updateOrder: updateCapexOrder,
     deleteOrder: deleteCapexOrder,
+    clearAll: clearAllCapexOrders,
     setError: setCapexOrdersError
   } = useOrderData('capex');
 
@@ -512,7 +516,10 @@ const HospitalITFinanceDashboard = () => {
         />
 
         {/* Panneau de paramétrage */}
-        <SettingsPanel />
+        <SettingsPanel
+          onClearOpex={() => { clearAllOpex(); clearAllOpexOrders(); }}
+          onClearCapex={() => { clearAllCapex(); clearAllCapexOrders(); }}
+        />
       </div>
     </div>
   );

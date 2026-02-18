@@ -3,7 +3,7 @@
  */
 
 import React, { useState } from 'react';
-import { Settings, Palette, Columns, Shield, Users, RotateCcw, Save, FileText, Trash2, Github, RefreshCw, Upload, CheckCircle, XCircle } from 'lucide-react';
+import { Settings, Palette, Columns, Shield, Users, RotateCcw, Save, FileText, Trash2, Github, RefreshCw, Upload, CheckCircle, XCircle, Database, AlertTriangle } from 'lucide-react';
 import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
 import { ConfirmDialog } from '../common/ConfirmDialog';
@@ -22,6 +22,7 @@ const SETTINGS_TABS = [
   { id: 'users', label: 'Utilisateurs', icon: Users },
   { id: 'logs', label: 'Logs', icon: FileText },
   { id: 'github', label: 'GitHub', icon: Github },
+  { id: 'data', label: 'Données', icon: Database },
 ];
 
 const COLOR_LABELS = {
@@ -78,7 +79,7 @@ const LOG_TYPE_LABELS = {
   account_enabled: { label: 'Compte réactivé', color: 'text-blue-600', bg: 'bg-blue-50' }
 };
 
-export const SettingsPanel = () => {
+export const SettingsPanel = ({ onClearOpex, onClearCapex }) => {
   const { settings, isSettingsOpen, setIsSettingsOpen, updateColors, updateSettings, toggleOpexColumn, toggleCapexColumn, updateRules, resetSettings } = useSettings();
   const { users, addUser, deleteUser, toggleUserDisabled, changePassword, isAdmin, isSuperAdmin, authLogs, clearLogs } = useAuth();
   const { canManageColumns } = usePermissions();
@@ -90,6 +91,8 @@ export const SettingsPanel = () => {
   const [changePasswordId, setChangePasswordId] = useState(null);
   const [changePasswordValue, setChangePasswordValue] = useState('');
   const [confirmPurge, setConfirmPurge] = useState(false);
+  const [confirmClearOpex, setConfirmClearOpex] = useState(false);
+  const [confirmClearCapex, setConfirmClearCapex] = useState(false);
 
   // ---- État GitHub ----
   const [ghConfig, setGhConfig] = useState(() => github.loadGithubConfig() || { enabled: false, token: '', owner: '', repo: '', branch: 'main', dataPath: 'data' });
@@ -207,6 +210,8 @@ export const SettingsPanel = () => {
           if (tab.id === 'customColumns' && !canManageColumns) return false;
           // Filtrer users et logs pour admins uniquement
           if ((tab.id === 'users' || tab.id === 'logs') && !isAdmin) return false;
+          // Filtrer données pour superadmin uniquement
+          if (tab.id === 'data' && !isSuperAdmin) return false;
           return true;
         }).map(tab => {
           const Icon = tab.icon;
@@ -544,6 +549,51 @@ export const SettingsPanel = () => {
           </div>
         )}
 
+        {/* Gestion des données (superadmin) */}
+        {activeSettingsTab === 'data' && (
+          <div className="space-y-5">
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 flex items-start gap-2">
+              <AlertTriangle size={18} className="text-yellow-600 flex-shrink-0 mt-0.5" />
+              <div className="text-sm text-yellow-800">
+                <strong>Attention :</strong> Ces actions suppriment définitivement toutes les données du tableau sélectionné,
+                y compris les commandes associées. Cette opération est irréversible.
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h3 className="text-sm font-semibold text-gray-800 mb-2">Tableau OPEX</h3>
+                <p className="text-xs text-gray-500 mb-3">
+                  Supprime tous les fournisseurs OPEX et leurs commandes associées.
+                </p>
+                <Button
+                  variant="danger"
+                  size="sm"
+                  icon={<Trash2 size={14} />}
+                  onClick={() => setConfirmClearOpex(true)}
+                >
+                  Vider le tableau OPEX
+                </Button>
+              </div>
+
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h3 className="text-sm font-semibold text-gray-800 mb-2">Tableau CAPEX</h3>
+                <p className="text-xs text-gray-500 mb-3">
+                  Supprime tous les projets CAPEX et leurs commandes associées.
+                </p>
+                <Button
+                  variant="danger"
+                  size="sm"
+                  icon={<Trash2 size={14} />}
+                  onClick={() => setConfirmClearCapex(true)}
+                >
+                  Vider le tableau CAPEX
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* GitHub Sync */}
         {activeSettingsTab === 'github' && (
           <div className="space-y-5">
@@ -649,6 +699,26 @@ export const SettingsPanel = () => {
         title="Purger les logs"
         message="Êtes-vous sûr de vouloir supprimer tous les logs de connexion ? Cette action est irréversible."
         confirmText="Purger"
+        variant="danger"
+      />
+
+      <ConfirmDialog
+        isOpen={confirmClearOpex}
+        onClose={() => setConfirmClearOpex(false)}
+        onConfirm={() => { onClearOpex?.(); setConfirmClearOpex(false); }}
+        title="Vider le tableau OPEX"
+        message="Êtes-vous sûr de vouloir supprimer TOUS les fournisseurs OPEX et leurs commandes ? Cette action est irréversible et sera synchronisée sur GitHub."
+        confirmText="Tout supprimer"
+        variant="danger"
+      />
+
+      <ConfirmDialog
+        isOpen={confirmClearCapex}
+        onClose={() => setConfirmClearCapex(false)}
+        onConfirm={() => { onClearCapex?.(); setConfirmClearCapex(false); }}
+        title="Vider le tableau CAPEX"
+        message="Êtes-vous sûr de vouloir supprimer TOUS les projets CAPEX et leurs commandes ? Cette action est irréversible et sera synchronisée sur GitHub."
+        confirmText="Tout supprimer"
         variant="danger"
       />
     </Modal>

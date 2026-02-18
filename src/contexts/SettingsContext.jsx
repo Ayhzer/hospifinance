@@ -220,12 +220,23 @@ export const SettingsProvider = ({ children }) => {
     });
   }, [persist]);
 
+  const reorderDashboards = useCallback((fromIndex, toIndex) => {
+    setSettings(prev => {
+      const arr = [...(prev.customDashboards || [])];
+      const [moved] = arr.splice(fromIndex, 1);
+      arr.splice(toIndex, 0, moved);
+      const u = { ...prev, customDashboards: arr };
+      persist(u);
+      return u;
+    });
+  }, [persist]);
+
   return (
     <SettingsContext.Provider value={{
       settings, isSettingsOpen, setIsSettingsOpen, loading,
       updateSettings, updateColors, toggleOpexColumn, toggleCapexColumn,
       updateRules, resetSettings, addCustomColumn, removeCustomColumn, updateCustomColumn,
-      addDashboard, updateDashboard, removeDashboard,
+      addDashboard, updateDashboard, removeDashboard, reorderDashboards,
       DEFAULT_SETTINGS
     }}>
       {children}

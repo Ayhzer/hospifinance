@@ -4,11 +4,31 @@
  * localStorage sert de cache local rapide (écriture immédiate).
  * GitHub est la source de vérité partagée (sync asynchrone).
  *
- * Configuration stockée dans localStorage sous GITHUB_CONFIG_KEY.
- * Aucune variable d'environnement requise — tout se configure via l'UI.
+ * Configuration :
+ * 1) Variables d'environnement Vite (VITE_GITHUB_*) — configuration automatique au build
+ * 2) localStorage (GITHUB_CONFIG_KEY) — surcharge manuelle via l'UI (optionnel)
  */
 
 const GITHUB_CONFIG_KEY = 'hospifinance_github_config';
+
+/**
+ * Configuration par défaut depuis les variables d'environnement Vite.
+ * Injectées au build time → disponibles automatiquement dans tous les navigateurs.
+ */
+const getEnvConfig = () => {
+  const token    = import.meta.env.VITE_GITHUB_TOKEN;
+  const owner    = import.meta.env.VITE_GITHUB_OWNER;
+  const repo     = import.meta.env.VITE_GITHUB_REPO;
+  if (!token || !owner || !repo) return null;
+  return {
+    enabled:  true,
+    token,
+    owner,
+    repo,
+    branch:   import.meta.env.VITE_GITHUB_BRANCH   || 'main',
+    dataPath: import.meta.env.VITE_GITHUB_DATA_PATH || 'data',
+  };
+};
 
 const FILES = {
   opex:        'opex.json',
@@ -25,12 +45,19 @@ const shaCache = {};
 // ==================== Configuration ====================
 
 export const loadGithubConfig = () => {
+  // 1) localStorage (surcharge manuelle via UI)
   try {
     const raw = localStorage.getItem(GITHUB_CONFIG_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed?.enabled && parsed?.token && parsed?.owner && parsed?.repo) {
+        return parsed;
+      }
+    }
+  } catch { /* ignore */ }
+
+  // 2) Variables d'environnement Vite (configuration automatique)
+  return getEnvConfig();
 };
 
 export const saveGithubConfig = (config) => {

@@ -42,28 +42,46 @@ export const useCapexData = () => {
           setLoading(false);
         }
       } else {
-        const storedData = loadCapexData();
-        if (storedData && storedData.length > 0) {
-          setProjects(storedData);
-        } else if (!hasCapexData()) {
-          setProjects(DEFAULT_CAPEX_DATA);
-          saveCapexData(DEFAULT_CAPEX_DATA);
-          markAsInitialized();
-        } else {
-          setProjects([]);
-        }
-        setLoading(false);
+        // Priorité : 1) GitHub (source de vérité), 2) localStorage, 3) defaults
+        let loaded = false;
 
-        // Sync depuis GitHub après chargement local
+        // 1) Tenter GitHub d'abord (bloquant) pour préserver les données de production
         if (github.isGitHubEnabled()) {
-          github.fetchCapex().then(data => {
-            if (data !== null) {
+          try {
+            const ghData = await github.fetchCapex();
+            if (ghData !== null && ghData.length > 0) {
               skipNextGithubPush.current = true;
-              setProjects(data);
-              saveCapexData(data);
+              setProjects(ghData);
+              saveCapexData(ghData);
+              markAsInitialized();
+              loaded = true;
             }
-          }).catch(err => console.warn('[GitHub] Sync CAPEX échoué:', err.message));
+          } catch (err) {
+            console.warn('[GitHub] Sync CAPEX échoué:', err.message);
+          }
         }
+
+        // 2) Sinon, localStorage
+        if (!loaded) {
+          const storedData = loadCapexData();
+          if (storedData && storedData.length > 0) {
+            setProjects(storedData);
+            loaded = true;
+          }
+        }
+
+        // 3) En dernier recours : données par défaut (uniquement si jamais initialisé)
+        if (!loaded) {
+          if (!hasCapexData()) {
+            setProjects(DEFAULT_CAPEX_DATA);
+            saveCapexData(DEFAULT_CAPEX_DATA);
+            markAsInitialized();
+          } else {
+            setProjects([]);
+          }
+        }
+
+        setLoading(false);
       }
     };
     loadData();

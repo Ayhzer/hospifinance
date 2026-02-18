@@ -71,20 +71,29 @@ export const SettingsProvider = ({ children }) => {
           setLoading(false);
         }
       } else {
-        const stored = loadSettings();
-        if (stored) setSettings(mergeSettings(stored));
-        setLoading(false);
+        // Priorité : 1) GitHub (source de vérité), 2) localStorage, 3) defaults
+        let loaded = false;
 
-        // Sync paramètres depuis GitHub
         if (github.isGitHubEnabled()) {
-          github.fetchSettings().then(data => {
-            if (data) {
-              const merged = mergeSettings(data);
+          try {
+            const ghSettings = await github.fetchSettings();
+            if (ghSettings) {
+              const merged = mergeSettings(ghSettings);
               setSettings(merged);
               saveSettings(merged);
+              loaded = true;
             }
-          }).catch(err => console.warn('[GitHub] Sync paramètres échoué:', err.message));
+          } catch (err) {
+            console.warn('[GitHub] Sync paramètres échoué:', err.message);
+          }
         }
+
+        if (!loaded) {
+          const stored = loadSettings();
+          if (stored) setSettings(mergeSettings(stored));
+        }
+
+        setLoading(false);
       }
     };
     loadData();

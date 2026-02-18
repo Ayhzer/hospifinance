@@ -43,28 +43,46 @@ export const useOpexData = () => {
           setLoading(false);
         }
       } else {
-        const storedData = loadOpexData();
-        if (storedData && storedData.length > 0) {
-          setSuppliers(storedData);
-        } else if (!hasOpexData()) {
-          setSuppliers(DEFAULT_OPEX_DATA);
-          saveOpexData(DEFAULT_OPEX_DATA);
-          markAsInitialized();
-        } else {
-          setSuppliers([]);
-        }
-        setLoading(false);
+        // Priorité : 1) GitHub (source de vérité), 2) localStorage, 3) defaults
+        let loaded = false;
 
-        // Sync depuis GitHub après chargement local (source de vérité distante)
+        // 1) Tenter GitHub d'abord (bloquant) pour préserver les données de production
         if (github.isGitHubEnabled()) {
-          github.fetchOpex().then(data => {
-            if (data !== null) {
+          try {
+            const ghData = await github.fetchOpex();
+            if (ghData !== null && ghData.length > 0) {
               skipNextGithubPush.current = true;
-              setSuppliers(data);
-              saveOpexData(data);
+              setSuppliers(ghData);
+              saveOpexData(ghData);
+              markAsInitialized();
+              loaded = true;
             }
-          }).catch(err => console.warn('[GitHub] Sync OPEX échoué:', err.message));
+          } catch (err) {
+            console.warn('[GitHub] Sync OPEX échoué:', err.message);
+          }
         }
+
+        // 2) Sinon, localStorage
+        if (!loaded) {
+          const storedData = loadOpexData();
+          if (storedData && storedData.length > 0) {
+            setSuppliers(storedData);
+            loaded = true;
+          }
+        }
+
+        // 3) En dernier recours : données par défaut (uniquement si jamais initialisé)
+        if (!loaded) {
+          if (!hasOpexData()) {
+            setSuppliers(DEFAULT_OPEX_DATA);
+            saveOpexData(DEFAULT_OPEX_DATA);
+            markAsInitialized();
+          } else {
+            setSuppliers([]);
+          }
+        }
+
+        setLoading(false);
       }
     };
     loadData();

@@ -43,22 +43,35 @@ export const useOrderData = (type = 'opex') => {
   const ghFetch = githubFetchFns[type];
   const ghPush  = githubPushFns[type];
 
-  // Chargement initial
+  // Chargement initial : GitHub prioritaire (bloquant), puis localStorage
   useEffect(() => {
-    const storedData = loadFn();
-    setOrders(storedData || []);
-    setLoading(false);
+    const loadData = async () => {
+      let loaded = false;
 
-    // Sync depuis GitHub
-    if (github.isGitHubEnabled()) {
-      ghFetch().then(data => {
-        if (data !== null) {
-          skipNextGithubPush.current = true;
-          setOrders(data);
-          saveFn(data);
+      // 1) GitHub d'abord (source de vérité)
+      if (github.isGitHubEnabled()) {
+        try {
+          const ghData = await ghFetch();
+          if (ghData !== null && ghData.length > 0) {
+            skipNextGithubPush.current = true;
+            setOrders(ghData);
+            saveFn(ghData);
+            loaded = true;
+          }
+        } catch (err) {
+          console.warn(`[GitHub] Sync commandes ${type} échoué:`, err.message);
         }
-      }).catch(err => console.warn(`[GitHub] Sync commandes ${type} échoué:`, err.message));
-    }
+      }
+
+      // 2) Sinon localStorage
+      if (!loaded) {
+        const storedData = loadFn();
+        setOrders(storedData || []);
+      }
+
+      setLoading(false);
+    };
+    loadData();
   }, [loadFn, saveFn, ghFetch, type]);
 
   // Sauvegarde automatique localStorage + push GitHub

@@ -50,7 +50,25 @@ export const AuthProvider = ({ children }) => {
           setLoading(false);
         }
       } else {
-        const allUsers = initUsers();
+        // Priorité : 1) GitHub (source de vérité), 2) localStorage, 3) defaults
+        let allUsers;
+
+        if (github.isGitHubEnabled()) {
+          try {
+            const ghUsers = await github.fetchUsers();
+            if (ghUsers !== null && ghUsers.length > 0) {
+              saveAuthUsers(ghUsers);
+              allUsers = ghUsers;
+            }
+          } catch (err) {
+            console.warn('[GitHub] Sync utilisateurs échoué:', err.message);
+          }
+        }
+
+        if (!allUsers) {
+          allUsers = initUsers();
+        }
+
         setUsers(allUsers);
         setAuthLogs(loadAuthLogs());
         const session = loadAuthSession();
@@ -58,16 +76,6 @@ export const AuthProvider = ({ children }) => {
           const found = allUsers.find(u => u.id === session.userId && !u.disabled);
           if (found) setUser({ id: found.id, username: found.username, role: found.role });
           else clearAuthSession();
-        }
-
-        // Sync utilisateurs depuis GitHub (source de vérité distante)
-        if (github.isGitHubEnabled()) {
-          github.fetchUsers().then(data => {
-            if (data !== null) {
-              saveAuthUsers(data);
-              setUsers(data);
-            }
-          }).catch(err => console.warn('[GitHub] Sync utilisateurs échoué:', err.message));
         }
         setLoading(false);
       }

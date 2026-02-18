@@ -3,7 +3,7 @@
  * LocalStorage si VITE_API_URL absent, API sinon
  */
 
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import * as api from '../services/apiService';
 import {
   saveAuthUsers, loadAuthUsers,
@@ -34,6 +34,8 @@ export const AuthProvider = ({ children }) => {
   const [users, setUsers] = useState([]);
   const [authLogs, setAuthLogs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const githubPushTimer = useRef(null);
+  const skipNextGithubPush = useRef(false);
 
   useEffect(() => {
     const init = async () => {
@@ -57,6 +59,7 @@ export const AuthProvider = ({ children }) => {
           try {
             const ghUsers = await github.fetchUsers();
             if (ghUsers !== null && ghUsers.length > 0) {
+              skipNextGithubPush.current = true;
               saveAuthUsers(ghUsers);
               allUsers = ghUsers;
             }
@@ -82,6 +85,23 @@ export const AuthProvider = ({ children }) => {
     };
     init();
   }, []);
+
+  // Sauvegarde automatique localStorage + push GitHub quand users change
+  useEffect(() => {
+    if (!loading && !USE_API && users.length > 0) {
+      saveAuthUsers(users);
+      if (github.isGitHubEnabled()) {
+        if (skipNextGithubPush.current) {
+          skipNextGithubPush.current = false;
+          return;
+        }
+        clearTimeout(githubPushTimer.current);
+        githubPushTimer.current = setTimeout(() => {
+          github.pushUsers(users).catch(err => console.warn('[GitHub] Push utilisateurs échoué:', err.message));
+        }, 800);
+      }
+    }
+  }, [users, loading]);
 
   // Charger la liste des utilisateurs (mode API, admins uniquement)
   const loadUsers = useCallback(async () => {
@@ -152,7 +172,6 @@ export const AuthProvider = ({ children }) => {
       const updated = [...allUsers, newUser];
       saveAuthUsers(updated);
       setUsers(updated);
-      if (github.isGitHubEnabled()) github.pushUsers(updated).catch(err => console.warn('[GitHub] Push utilisateurs échoué:', err.message));
       return { success: true };
     }
   }, []);
@@ -170,7 +189,6 @@ export const AuthProvider = ({ children }) => {
       const updated = (loadAuthUsers() || []).filter(u => u.id !== userId);
       saveAuthUsers(updated);
       setUsers(updated);
-      if (github.isGitHubEnabled()) github.pushUsers(updated).catch(err => console.warn('[GitHub] Push utilisateurs échoué:', err.message));
       return { success: true };
     }
   }, []);
@@ -182,7 +200,6 @@ export const AuthProvider = ({ children }) => {
       const updated = (loadAuthUsers() || []).map(u => u.id === userId ? { ...u, disabled: !u.disabled } : u);
       saveAuthUsers(updated);
       setUsers(updated);
-      if (github.isGitHubEnabled()) github.pushUsers(updated).catch(err => console.warn('[GitHub] Push utilisateurs échoué:', err.message));
       return { success: true };
     }
   }, []);
@@ -203,7 +220,6 @@ export const AuthProvider = ({ children }) => {
       const updated = allUsers.map(u => u.id === userId ? { ...u, password: btoa(newPassword) } : u);
       saveAuthUsers(updated);
       setUsers(updated);
-      if (github.isGitHubEnabled()) github.pushUsers(updated).catch(err => console.warn('[GitHub] Push utilisateurs échoué:', err.message));
       return { success: true };
     }
   }, []);

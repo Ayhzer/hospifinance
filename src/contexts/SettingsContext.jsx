@@ -33,7 +33,8 @@ const DEFAULT_SETTINGS = {
     status: true, period: true, notes: true, actions: true
   },
   rules: { warningThreshold: 75, criticalThreshold: 90 },
-  customColumns: { opex: [], capex: [] }
+  customColumns: { opex: [], capex: [] },
+  customDashboards: []
 };
 
 const mergeSettings = (stored) => ({
@@ -46,7 +47,8 @@ const mergeSettings = (stored) => ({
   customColumns: {
     opex: stored.customColumns?.opex || [],
     capex: stored.customColumns?.capex || []
-  }
+  },
+  customDashboards: stored.customDashboards || []
 });
 
 export const SettingsProvider = ({ children }) => {
@@ -188,11 +190,42 @@ export const SettingsProvider = ({ children }) => {
     });
   }, [persist]);
 
+  // --- Custom Dashboards CRUD ---
+  const addDashboard = useCallback((dashboard) => {
+    setSettings(prev => {
+      const u = { ...prev, customDashboards: [...(prev.customDashboards || []), dashboard] };
+      persist(u);
+      return u;
+    });
+  }, [persist]);
+
+  const updateDashboard = useCallback((dashboardId, updates) => {
+    setSettings(prev => {
+      const u = {
+        ...prev,
+        customDashboards: (prev.customDashboards || []).map(d =>
+          d.id === dashboardId ? { ...d, ...updates } : d
+        )
+      };
+      persist(u);
+      return u;
+    });
+  }, [persist]);
+
+  const removeDashboard = useCallback((dashboardId) => {
+    setSettings(prev => {
+      const u = { ...prev, customDashboards: (prev.customDashboards || []).filter(d => d.id !== dashboardId) };
+      persist(u);
+      return u;
+    });
+  }, [persist]);
+
   return (
     <SettingsContext.Provider value={{
       settings, isSettingsOpen, setIsSettingsOpen, loading,
       updateSettings, updateColors, toggleOpexColumn, toggleCapexColumn,
       updateRules, resetSettings, addCustomColumn, removeCustomColumn, updateCustomColumn,
+      addDashboard, updateDashboard, removeDashboard,
       DEFAULT_SETTINGS
     }}>
       {children}

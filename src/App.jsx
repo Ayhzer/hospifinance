@@ -5,6 +5,9 @@
 
 import { useState, useCallback, useRef } from 'react';
 import { DollarSign, Server, LogOut, Settings } from 'lucide-react';
+import { useDashboardData } from './hooks/useDashboardData';
+import { DashboardBuilder } from './components/dashboard-builder/DashboardBuilder';
+import { CreateDashboardModal } from './components/dashboard-builder/CreateDashboardModal';
 
 // Contextes
 import { useAuth } from './contexts/AuthContext';
@@ -41,7 +44,7 @@ import { AlertBanner } from './components/common/AlertBanner';
 const HospitalITFinanceDashboard = () => {
   const { user, logout, loading: authLoading } = useAuth();
   const permissions = usePermissions();
-  const { settings, setIsSettingsOpen } = useSettings();
+  const { settings, setIsSettingsOpen, addDashboard } = useSettings();
   const { handleTitleClick } = useSettingsShortcut();
 
   // États pour les onglets
@@ -121,6 +124,21 @@ const HospitalITFinanceDashboard = () => {
   const opexTotals = useOpexTotals(suppliers, opexOrders);
   const capexTotals = useCapexTotals(projects, capexOrders);
   const consolidatedTotals = useConsolidatedTotals(opexTotals, capexTotals);
+
+  // Dashboard builder data
+  const dashboardData = useDashboardData({
+    suppliers, projects, opexOrders, capexOrders,
+    opexTotals, capexTotals, consolidatedTotals
+  });
+
+  // État pour la modale de création de dashboard
+  const [showCreateDashboard, setShowCreateDashboard] = useState(false);
+
+  const handleCreateDashboard = useCallback((name) => {
+    const id = `dash_${Date.now()}`;
+    addDashboard({ id, name, widgets: [] });
+    setActiveTab(`custom_${id}`);
+  }, [addDashboard]);
 
   // Handlers OPEX
   const handleAddOpex = useCallback(() => {
@@ -368,7 +386,11 @@ const HospitalITFinanceDashboard = () => {
         )}
 
         {/* Navigation par onglets */}
-        <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
+        <TabNavigation
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          onCreateDashboard={() => setShowCreateDashboard(true)}
+        />
 
         {/* Vue d'ensemble */}
         {activeTab === 'overview' && (
@@ -461,6 +483,15 @@ const HospitalITFinanceDashboard = () => {
           />
         )}
 
+        {/* Dashboards custom */}
+        {activeTab.startsWith('custom_') && (
+          <DashboardBuilder
+            dashboardId={activeTab.replace('custom_', '')}
+            dashboardData={dashboardData}
+            onDeleteDashboard={() => setActiveTab('overview')}
+          />
+        )}
+
         {/* Modales OPEX */}
         <OpexModal
           isOpen={showOpexModal}
@@ -513,6 +544,13 @@ const HospitalITFinanceDashboard = () => {
           parentItems={projects}
           parentLabel="Projet"
           parentNameKey="project"
+        />
+
+        {/* Modale création de dashboard */}
+        <CreateDashboardModal
+          isOpen={showCreateDashboard}
+          onClose={() => setShowCreateDashboard(false)}
+          onSave={handleCreateDashboard}
         />
 
         {/* Panneau de paramétrage */}

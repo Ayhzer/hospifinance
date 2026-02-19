@@ -3,7 +3,7 @@
  */
 
 import React, { useState, useCallback, useMemo } from 'react';
-import { Edit2, Trash2, Download, Plus, FileUp, FileDown, RotateCcw, FilterX } from 'lucide-react';
+import { Edit2, Trash2, Download, Plus, FileUp, FileDown, RotateCcw, FilterX, GripVertical } from 'lucide-react';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { calculateAvailable, calculateUsageRate } from '../../utils/calculations';
 import { computeOrderImpactByParent } from '../../utils/orderCalculations';
@@ -13,6 +13,7 @@ import { usePermissions } from '../../contexts/PermissionsContext';
 import { useSettings } from '../../contexts/SettingsContext';
 import { useColumnResize } from '../../hooks/useColumnResize.jsx';
 import { useTableControls } from '../../hooks/useTableControls.jsx';
+import { useColumnOrder } from '../../hooks/useColumnOrder';
 import { STATUS_COLORS, ENVELOPPE_COLORS } from '../../constants/budgetConstants';
 import { Button } from '../common/Button';
 import { ProgressBar } from '../common/ProgressBar';
@@ -34,13 +35,21 @@ const CAPEX_DEFAULT_WIDTHS = {
   actions: 80,
 };
 
+const CAPEX_COL_KEYS = ['enveloppe', 'projet', 'statut', 'budget', 'depense', 'engagement', 'disponible', 'utilisation', 'periode', 'notes'];
+
 export const CapexTable = ({ projects, totals, orders = [], onEdit, onDelete, onAdd, onImport, calculateEnveloppeTotal, getUsedEnveloppes }) => {
   const permissions = usePermissions();
   const { settings } = useSettings();
   const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, project: null });
   const [importModalOpen, setImportModalOpen] = useState(false);
 
-  const { getHeaderProps, getCellProps, ResizeHandle, resetAll } = useColumnResize('capex', CAPEX_DEFAULT_WIDTHS);
+  const { getHeaderProps, getCellProps, ResizeHandle, resetAll: resetWidths } = useColumnResize('capex', CAPEX_DEFAULT_WIDTHS);
+  const { order: colOrder, resetOrder, getDragSourceProps, getDropProps, dropTarget } = useColumnOrder('capex', CAPEX_COL_KEYS);
+
+  const resetAll = useCallback(() => {
+    resetWidths();
+    resetOrder();
+  }, [resetWidths, resetOrder]);
 
   // Colonnes personnalisées pour CAPEX
   const customColumns = settings.customColumns?.capex || [];
@@ -79,18 +88,181 @@ export const CapexTable = ({ projects, totals, orders = [], onEdit, onDelete, on
 
   const handleImport = useCallback(async (file) => {
     const result = await importCapexFromCSV(file, projects);
-
     if (result.success && result.data) {
-      result.data.forEach(project => {
-        onImport(project);
-      });
+      result.data.forEach(project => { onImport(project); });
     }
-
     return result;
   }, [projects, onImport]);
 
   const thBase = "px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-semibold text-gray-700 whitespace-nowrap relative";
   const tdBase = "px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm whitespace-nowrap overflow-hidden text-ellipsis";
+
+  // Grip drag handle
+  const grip = (k) => (
+    <span
+      {...getDragSourceProps(k)}
+      onClick={e => e.stopPropagation()}
+      className="cursor-grab mr-1 inline-flex items-center text-gray-300 hover:text-gray-500"
+      title="Glisser pour déplacer"
+    >
+      <GripVertical size={14} />
+    </span>
+  );
+
+  // Blue drop indicator on the left edge of the target th
+  const dropIndicator = (k) =>
+    dropTarget === k ? <span className="absolute inset-y-1 left-0 w-0.5 bg-blue-500 rounded-full" /> : null;
+
+  // Header cell per column key
+  const renderTh = (k) => {
+    switch (k) {
+      case 'enveloppe': return (
+        <th key={k} className={`${thBase} text-left cursor-pointer select-none`} {...getHeaderProps('enveloppe')} {...getDropProps(k)} onClick={() => toggleSort('enveloppe')}>
+          {dropIndicator(k)}{grip(k)}Enveloppe<SortIcon columnKey="enveloppe" /><ResizeHandle columnKey="enveloppe" />
+        </th>
+      );
+      case 'projet': return (
+        <th key={k} className={`${thBase} text-left cursor-pointer select-none`} {...getHeaderProps('projet')} {...getDropProps(k)} onClick={() => toggleSort('project')}>
+          {dropIndicator(k)}{grip(k)}Projet<SortIcon columnKey="project" /><ResizeHandle columnKey="projet" />
+        </th>
+      );
+      case 'statut': return (
+        <th key={k} className={`${thBase} text-center cursor-pointer select-none`} {...getHeaderProps('statut')} {...getDropProps(k)} onClick={() => toggleSort('status')}>
+          {dropIndicator(k)}{grip(k)}Statut<SortIcon columnKey="status" /><ResizeHandle columnKey="statut" />
+        </th>
+      );
+      case 'budget': return (
+        <th key={k} className={`${thBase} text-right cursor-pointer select-none`} {...getHeaderProps('budget')} {...getDropProps(k)} onClick={() => toggleSort('budgetTotal')}>
+          {dropIndicator(k)}{grip(k)}Budget total<SortIcon columnKey="budgetTotal" /><ResizeHandle columnKey="budget" />
+        </th>
+      );
+      case 'depense': return (
+        <th key={k} className={`${thBase} text-right cursor-pointer select-none`} {...getHeaderProps('depense')} {...getDropProps(k)} onClick={() => toggleSort('_totalDepense')}>
+          {dropIndicator(k)}{grip(k)}Dépensé<SortIcon columnKey="_totalDepense" /><ResizeHandle columnKey="depense" />
+        </th>
+      );
+      case 'engagement': return (
+        <th key={k} className={`${thBase} text-right cursor-pointer select-none`} {...getHeaderProps('engagement')} {...getDropProps(k)} onClick={() => toggleSort('_totalEngagement')}>
+          {dropIndicator(k)}{grip(k)}Engagé<SortIcon columnKey="_totalEngagement" /><ResizeHandle columnKey="engagement" />
+        </th>
+      );
+      case 'disponible': return (
+        <th key={k} className={`${thBase} text-right cursor-pointer select-none`} {...getHeaderProps('disponible')} {...getDropProps(k)} onClick={() => toggleSort('_disponible')}>
+          {dropIndicator(k)}{grip(k)}Disponible<SortIcon columnKey="_disponible" /><ResizeHandle columnKey="disponible" />
+        </th>
+      );
+      case 'utilisation': return (
+        <th key={k} className={`${thBase} text-center cursor-pointer select-none`} {...getHeaderProps('utilisation')} {...getDropProps(k)} onClick={() => toggleSort('_utilisation')}>
+          {dropIndicator(k)}{grip(k)}Utilisation<SortIcon columnKey="_utilisation" /><ResizeHandle columnKey="utilisation" />
+        </th>
+      );
+      case 'periode': return (
+        <th key={k} className={`${thBase} text-center cursor-pointer select-none`} {...getHeaderProps('periode')} {...getDropProps(k)} onClick={() => toggleSort('dateDebut')}>
+          {dropIndicator(k)}{grip(k)}Période<SortIcon columnKey="dateDebut" /><ResizeHandle columnKey="periode" />
+        </th>
+      );
+      case 'notes': return (
+        <th key={k} className={`${thBase} text-left cursor-pointer select-none`} {...getHeaderProps('notes')} {...getDropProps(k)} onClick={() => toggleSort('notes')}>
+          {dropIndicator(k)}{grip(k)}Notes<SortIcon columnKey="notes" /><ResizeHandle columnKey="notes" />
+        </th>
+      );
+      default: return null;
+    }
+  };
+
+  // Filter row cell per column key
+  const renderFilterTh = (k) => {
+    switch (k) {
+      case 'enveloppe': return <th key={k} className="px-1 py-1" {...getCellProps('enveloppe')}><FilterInput columnKey="enveloppe" placeholder="Enveloppe..." /></th>;
+      case 'projet':    return <th key={k} className="px-1 py-1" {...getCellProps('projet')}><FilterInput columnKey="project" placeholder="Projet..." /></th>;
+      case 'statut':    return <th key={k} className="px-1 py-1" {...getCellProps('statut')}><FilterInput columnKey="status" placeholder="Statut..." /></th>;
+      case 'notes':     return <th key={k} className="px-1 py-1" {...getCellProps('notes')}><FilterInput columnKey="notes" placeholder="Notes..." /></th>;
+      case 'budget':    return <th key={k} className="px-1 py-1" {...getCellProps('budget')}></th>;
+      case 'depense':   return <th key={k} className="px-1 py-1" {...getCellProps('depense')}></th>;
+      case 'engagement':return <th key={k} className="px-1 py-1" {...getCellProps('engagement')}></th>;
+      case 'disponible':return <th key={k} className="px-1 py-1" {...getCellProps('disponible')}></th>;
+      case 'utilisation':return <th key={k} className="px-1 py-1" {...getCellProps('utilisation')}></th>;
+      case 'periode':   return <th key={k} className="px-1 py-1" {...getCellProps('periode')}></th>;
+      default: return null;
+    }
+  };
+
+  // Body cell per column key
+  const renderTd = (k, project) => {
+    switch (k) {
+      case 'enveloppe': return (
+        <td key={k} className={tdBase} {...getCellProps('enveloppe')}>
+          <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${ENVELOPPE_COLORS[project.enveloppe] || ENVELOPPE_COLORS['Autre']}`}>
+            {project.enveloppe || 'Autre'}
+          </span>
+        </td>
+      );
+      case 'projet': return (
+        <td key={k} className={`${tdBase} font-medium text-gray-900`} {...getCellProps('projet')}>{project.project}</td>
+      );
+      case 'statut': return (
+        <td key={k} className={tdBase} {...getCellProps('statut')}>
+          <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${STATUS_COLORS[project.status] || STATUS_COLORS.Planifié}`}>
+            {project.status}
+          </span>
+        </td>
+      );
+      case 'budget': return (
+        <td key={k} className={`${tdBase} text-right text-gray-900`} {...getCellProps('budget')}>{formatCurrency(project.budgetTotal)}</td>
+      );
+      case 'depense': return (
+        <td key={k} className={`${tdBase} text-right text-orange-600`} {...getCellProps('depense')}>{formatCurrency(project._totalDepense)}</td>
+      );
+      case 'engagement': return (
+        <td key={k} className={`${tdBase} text-right text-yellow-600`} {...getCellProps('engagement')}>{formatCurrency(project._totalEngagement)}</td>
+      );
+      case 'disponible': return (
+        <td key={k} className={`${tdBase} text-right font-semibold ${project._disponible < 0 ? 'text-red-600' : 'text-green-600'}`} {...getCellProps('disponible')}>
+          {formatCurrency(project._disponible)}
+        </td>
+      );
+      case 'utilisation': return (
+        <td key={k} className={tdBase} {...getCellProps('utilisation')}>
+          <div className="flex flex-col items-center">
+            <span className="text-xs sm:text-sm font-semibold mb-1">{project._utilisation.toFixed(1)}%</span>
+            <ProgressBar value={project._utilisation} showLabel={false} size="sm" warningThreshold={settings.rules.warningThreshold} criticalThreshold={settings.rules.criticalThreshold} />
+          </div>
+        </td>
+      );
+      case 'periode': return (
+        <td key={k} className={`${tdBase} text-center text-gray-700`} {...getCellProps('periode')}>
+          {project.dateDebut && project.dateFin && (
+            <div className="text-xs">
+              <div>{formatDate(project.dateDebut)}</div>
+              <div className="text-gray-500">→</div>
+              <div>{formatDate(project.dateFin)}</div>
+            </div>
+          )}
+        </td>
+      );
+      case 'notes': return (
+        <td key={k} className={`${tdBase} text-gray-600`} {...getCellProps('notes')}>{project.notes}</td>
+      );
+      default: return null;
+    }
+  };
+
+  // Footer cell per column key
+  const renderFooterTd = (k) => {
+    switch (k) {
+      case 'enveloppe': return <td key={k} className={`${tdBase} text-gray-900`}>TOTAL</td>;
+      case 'projet':    return <td key={k}></td>;
+      case 'statut':    return <td key={k}></td>;
+      case 'budget':    return <td key={k} className={`${tdBase} text-right text-gray-900`}>{formatCurrency(totals.budget)}</td>;
+      case 'depense':   return <td key={k} className={`${tdBase} text-right text-orange-600`}>{formatCurrency(totals.depense)}</td>;
+      case 'engagement':return <td key={k} className={`${tdBase} text-right text-yellow-600`}>{formatCurrency(totals.engagement)}</td>;
+      case 'disponible':return <td key={k} className={`${tdBase} text-right ${totals.disponible < 0 ? 'text-red-600' : 'text-green-600'}`}>{formatCurrency(totals.disponible)}</td>;
+      case 'utilisation':return <td key={k} className={`${tdBase} text-center`}>{totals.tauxUtilisation.toFixed(1)}%</td>;
+      case 'periode':   return <td key={k}></td>;
+      case 'notes':     return <td key={k}></td>;
+      default: return null;
+    }
+  };
 
   return (
     <div className="bg-white rounded-lg shadow-md p-3 sm:p-4 md:p-6">
@@ -103,7 +275,7 @@ export const CapexTable = ({ projects, totals, orders = [], onEdit, onDelete, on
             icon={<RotateCcw size={14} />}
             onClick={resetAll}
             className="flex-1 sm:flex-none"
-            title="Réinitialiser la largeur des colonnes"
+            title="Réinitialiser la largeur et l'ordre des colonnes"
           >
             <span className="hidden sm:inline">Colonnes</span>
           </Button>
@@ -215,123 +387,60 @@ export const CapexTable = ({ projects, totals, orders = [], onEdit, onDelete, on
       <div className="overflow-x-auto -mx-3 sm:mx-0">
         <div className="inline-block min-w-full align-middle">
           <div className="overflow-hidden">
-        <table className="w-full" style={{ tableLayout: 'fixed' }}>
-          <thead>
-            <tr className="bg-gray-50 border-b">
-              <th className={`${thBase} text-left cursor-pointer select-none`} {...getHeaderProps('enveloppe')} onClick={() => toggleSort('enveloppe')}>Enveloppe<SortIcon columnKey="enveloppe" /><ResizeHandle columnKey="enveloppe" /></th>
-              <th className={`${thBase} text-left cursor-pointer select-none`} {...getHeaderProps('projet')} onClick={() => toggleSort('project')}>Projet<SortIcon columnKey="project" /><ResizeHandle columnKey="projet" /></th>
-              <th className={`${thBase} text-center cursor-pointer select-none`} {...getHeaderProps('statut')} onClick={() => toggleSort('status')}>Statut<SortIcon columnKey="status" /><ResizeHandle columnKey="statut" /></th>
-              <th className={`${thBase} text-right cursor-pointer select-none`} {...getHeaderProps('budget')} onClick={() => toggleSort('budgetTotal')}>Budget total<SortIcon columnKey="budgetTotal" /><ResizeHandle columnKey="budget" /></th>
-              <th className={`${thBase} text-right cursor-pointer select-none`} {...getHeaderProps('depense')} onClick={() => toggleSort('_totalDepense')}>Dépensé<SortIcon columnKey="_totalDepense" /><ResizeHandle columnKey="depense" /></th>
-              <th className={`${thBase} text-right cursor-pointer select-none`} {...getHeaderProps('engagement')} onClick={() => toggleSort('_totalEngagement')}>Engagé<SortIcon columnKey="_totalEngagement" /><ResizeHandle columnKey="engagement" /></th>
-              <th className={`${thBase} text-right cursor-pointer select-none`} {...getHeaderProps('disponible')} onClick={() => toggleSort('_disponible')}>Disponible<SortIcon columnKey="_disponible" /><ResizeHandle columnKey="disponible" /></th>
-              <th className={`${thBase} text-center cursor-pointer select-none`} {...getHeaderProps('utilisation')} onClick={() => toggleSort('_utilisation')}>Utilisation<SortIcon columnKey="_utilisation" /><ResizeHandle columnKey="utilisation" /></th>
-              <th className={`${thBase} text-center cursor-pointer select-none`} {...getHeaderProps('periode')} onClick={() => toggleSort('dateDebut')}>Période<SortIcon columnKey="dateDebut" /><ResizeHandle columnKey="periode" /></th>
-              <th className={`${thBase} text-left cursor-pointer select-none`} {...getHeaderProps('notes')} onClick={() => toggleSort('notes')}>Notes<SortIcon columnKey="notes" /><ResizeHandle columnKey="notes" /></th>
-              {customColumns.map(column => (
-                <th key={column.id} className={`${thBase} text-left cursor-pointer select-none`} {...getHeaderProps(column.id)} onClick={() => toggleSort(column.id)}>
-                  {column.name}<SortIcon columnKey={column.id} />
-                  <ResizeHandle columnKey={column.id} />
-                </th>
-              ))}
-              <th className={`${thBase} text-center`} {...getHeaderProps('actions')}>Actions</th>
-            </tr>
-            <tr className="bg-white border-b">
-              <th className="px-1 py-1" {...getCellProps('enveloppe')}><FilterInput columnKey="enveloppe" placeholder="Enveloppe..." /></th>
-              <th className="px-1 py-1" {...getCellProps('projet')}><FilterInput columnKey="project" placeholder="Projet..." /></th>
-              <th className="px-1 py-1" {...getCellProps('statut')}><FilterInput columnKey="status" placeholder="Statut..." /></th>
-              <th className="px-1 py-1" {...getCellProps('budget')}></th>
-              <th className="px-1 py-1" {...getCellProps('depense')}></th>
-              <th className="px-1 py-1" {...getCellProps('engagement')}></th>
-              <th className="px-1 py-1" {...getCellProps('disponible')}></th>
-              <th className="px-1 py-1" {...getCellProps('utilisation')}></th>
-              <th className="px-1 py-1" {...getCellProps('periode')}></th>
-              <th className="px-1 py-1" {...getCellProps('notes')}><FilterInput columnKey="notes" placeholder="Notes..." /></th>
-              {customColumns.map(column => (
-                <th key={column.id} className="px-1 py-1" {...getCellProps(column.id)}><FilterInput columnKey={column.id} placeholder={`${column.name}...`} /></th>
-              ))}
-              <th className="px-1 py-1" {...getCellProps('actions')}></th>
-            </tr>
-          </thead>
-          <tbody>
-            {processedData.map((project) => (
-                <tr key={project.id} className="border-b hover:bg-gray-50">
-                  <td className={tdBase} {...getCellProps('enveloppe')}>
-                    <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${ENVELOPPE_COLORS[project.enveloppe] || ENVELOPPE_COLORS['Autre']}`}>
-                      {project.enveloppe || 'Autre'}
-                    </span>
-                  </td>
-                  <td className={`${tdBase} font-medium text-gray-900`} {...getCellProps('projet')}>{project.project}</td>
-                  <td className={tdBase} {...getCellProps('statut')}>
-                    <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${STATUS_COLORS[project.status] || STATUS_COLORS.Planifié}`}>
-                      {project.status}
-                    </span>
-                  </td>
-                  <td className={`${tdBase} text-right text-gray-900`} {...getCellProps('budget')}>
-                    {formatCurrency(project.budgetTotal)}
-                  </td>
-                  <td className={`${tdBase} text-right text-orange-600`} {...getCellProps('depense')}>
-                    {formatCurrency(project._totalDepense)}
-                  </td>
-                  <td className={`${tdBase} text-right text-yellow-600`} {...getCellProps('engagement')}>
-                    {formatCurrency(project._totalEngagement)}
-                  </td>
-                  <td className={`${tdBase} text-right font-semibold ${project._disponible < 0 ? 'text-red-600' : 'text-green-600'}`} {...getCellProps('disponible')}>
-                    {formatCurrency(project._disponible)}
-                  </td>
-                  <td className={tdBase} {...getCellProps('utilisation')}>
-                    <div className="flex flex-col items-center">
-                      <span className="text-xs sm:text-sm font-semibold mb-1">{project._utilisation.toFixed(1)}%</span>
-                      <ProgressBar value={project._utilisation} showLabel={false} size="sm" warningThreshold={settings.rules.warningThreshold} criticalThreshold={settings.rules.criticalThreshold} />
-                    </div>
-                  </td>
-                  <td className={`${tdBase} text-center text-gray-700`} {...getCellProps('periode')}>
-                    {project.dateDebut && project.dateFin && (
-                      <div className="text-xs">
-                        <div>{formatDate(project.dateDebut)}</div>
-                        <div className="text-gray-500">→</div>
-                        <div>{formatDate(project.dateFin)}</div>
-                      </div>
-                    )}
-                  </td>
-                  <td className={`${tdBase} text-gray-600`} {...getCellProps('notes')}>
-                    {project.notes}
-                  </td>
+            <table className="w-full" style={{ tableLayout: 'fixed' }}>
+              <thead>
+                <tr className="bg-gray-50 border-b">
+                  {colOrder.map(k => renderTh(k))}
                   {customColumns.map(column => (
-                    <td key={column.id} className={`${tdBase} text-gray-700`} {...getCellProps(column.id)}>
-                      {project[column.id] || '-'}
-                    </td>
+                    <th key={column.id} className={`${thBase} text-left cursor-pointer select-none`} {...getHeaderProps(column.id)} onClick={() => toggleSort(column.id)}>
+                      {column.name}<SortIcon columnKey={column.id} />
+                      <ResizeHandle columnKey={column.id} />
+                    </th>
                   ))}
-                  <td className={tdBase} {...getCellProps('actions')}>
-                    <div className="flex gap-1 sm:gap-2 justify-center">
-                      {permissions.can('edit', 'capex') && (
-                        <button onClick={() => onEdit(project)} className="p-1 text-blue-600 hover:bg-blue-50 rounded touch-manipulation" title="Modifier">
-                          <Edit2 size={16} />
-                        </button>
-                      )}
-                      {permissions.can('delete', 'capex') && (
-                        <button onClick={() => handleDeleteClick(project)} className="p-1 text-red-600 hover:bg-red-50 rounded touch-manipulation" title="Supprimer">
-                          <Trash2 size={16} />
-                        </button>
-                      )}
-                    </div>
-                  </td>
+                  <th className={`${thBase} text-center`} {...getHeaderProps('actions')}>Actions</th>
                 </tr>
-            ))}
-          </tbody>
-          <tfoot className="bg-gray-100 font-semibold">
-            <tr>
-              <td colSpan="2" className={`${tdBase} text-gray-900`}>TOTAL</td>
-              <td></td>
-              <td className={`${tdBase} text-right text-gray-900`}>{formatCurrency(totals.budget)}</td>
-              <td className={`${tdBase} text-right text-orange-600`}>{formatCurrency(totals.depense)}</td>
-              <td className={`${tdBase} text-right text-yellow-600`}>{formatCurrency(totals.engagement)}</td>
-              <td className={`${tdBase} text-right ${totals.disponible < 0 ? 'text-red-600' : 'text-green-600'}`}>{formatCurrency(totals.disponible)}</td>
-              <td className={`${tdBase} text-center`}>{totals.tauxUtilisation.toFixed(1)}%</td>
-              <td colSpan={2 + customColumns.length}></td>
-            </tr>
-          </tfoot>
-        </table>
+                <tr className="bg-white border-b">
+                  {colOrder.map(k => renderFilterTh(k))}
+                  {customColumns.map(column => (
+                    <th key={column.id} className="px-1 py-1" {...getCellProps(column.id)}><FilterInput columnKey={column.id} placeholder={`${column.name}...`} /></th>
+                  ))}
+                  <th className="px-1 py-1" {...getCellProps('actions')}></th>
+                </tr>
+              </thead>
+              <tbody>
+                {processedData.map((project) => (
+                  <tr key={project.id} className="border-b hover:bg-gray-50">
+                    {colOrder.map(k => renderTd(k, project))}
+                    {customColumns.map(column => (
+                      <td key={column.id} className={`${tdBase} text-gray-700`} {...getCellProps(column.id)}>
+                        {project[column.id] || '-'}
+                      </td>
+                    ))}
+                    <td className={tdBase} {...getCellProps('actions')}>
+                      <div className="flex gap-1 sm:gap-2 justify-center">
+                        {permissions.can('edit', 'capex') && (
+                          <button onClick={() => onEdit(project)} className="p-1 text-blue-600 hover:bg-blue-50 rounded touch-manipulation" title="Modifier">
+                            <Edit2 size={16} />
+                          </button>
+                        )}
+                        {permissions.can('delete', 'capex') && (
+                          <button onClick={() => handleDeleteClick(project)} className="p-1 text-red-600 hover:bg-red-50 rounded touch-manipulation" title="Supprimer">
+                            <Trash2 size={16} />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot className="bg-gray-100 font-semibold">
+                <tr>
+                  {colOrder.map(k => renderFooterTd(k))}
+                  {customColumns.map(column => <td key={column.id}></td>)}
+                  <td></td>
+                </tr>
+              </tfoot>
+            </table>
           </div>
         </div>
       </div>

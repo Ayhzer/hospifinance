@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, ChevronRight, ChevronLeft, Hash, BarChart3, PieChart as PieIcon, TrendingUp, Table } from 'lucide-react';
 import { WIDGET_TYPES, DATA_SOURCES, DEFAULT_WIDGET_SIZE } from '../../constants/dashboardConstants';
 import { WidgetConfigForm } from './WidgetConfigForm';
@@ -6,14 +6,31 @@ import { WidgetConfigForm } from './WidgetConfigForm';
 const ICONS = { Hash, BarChart3, PieChart: PieIcon, TrendingUp, Table };
 
 export const AddWidgetModal = ({ isOpen, onClose, onSave, editingWidget }) => {
-  const [step, setStep] = useState(editingWidget ? 3 : 1);
-  const [widgetType, setWidgetType] = useState(editingWidget?.type || '');
-  const [dataSource, setDataSource] = useState(editingWidget?.dataSource || '');
-  const [config, setConfig] = useState(editingWidget ? {
-    title: editingWidget.title,
-    field: editingWidget.config?.field || '',
-    size: editingWidget.size
-  } : { title: '', field: '', size: '' });
+  const [step, setStep] = useState(1);
+  const [widgetType, setWidgetType] = useState('');
+  const [dataSource, setDataSource] = useState('');
+  const [config, setConfig] = useState({ title: '', field: '', size: '' });
+
+  // Réinitialiser l'état à chaque ouverture
+  useEffect(() => {
+    if (isOpen) {
+      if (editingWidget) {
+        setStep(3);
+        setWidgetType(editingWidget.type);
+        setDataSource(editingWidget.dataSource);
+        setConfig({
+          title: editingWidget.title,
+          field: editingWidget.config?.field || '',
+          size: editingWidget.size
+        });
+      } else {
+        setStep(1);
+        setWidgetType('');
+        setDataSource('');
+        setConfig({ title: '', field: '', size: '' });
+      }
+    }
+  }, [isOpen, editingWidget]);
 
   if (!isOpen) return null;
 

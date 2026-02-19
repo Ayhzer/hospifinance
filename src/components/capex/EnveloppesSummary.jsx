@@ -10,6 +10,7 @@ import { ENVELOPPE_COLORS } from '../../constants/budgetConstants';
 import { ProgressBar } from '../common/ProgressBar';
 
 export const EnveloppesSummary = ({ projects, calculateEnveloppeTotal, getUsedEnveloppes }) => {
+  const [isOpen, setIsOpen] = useState(true);
   const [expandedEnveloppes, setExpandedEnveloppes] = useState(new Set());
 
   // Récupérer les enveloppes utilisées
@@ -38,13 +39,22 @@ export const EnveloppesSummary = ({ projects, calculateEnveloppeTotal, getUsedEn
   }
 
   return (
-    <div className="mb-6 space-y-3">
-      <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-        <Package size={20} className="text-blue-600" />
-        Synthèse par Enveloppe Budgétaire
-      </h3>
+    <div className="mb-6">
+      <button
+        onClick={() => setIsOpen(prev => !prev)}
+        className="w-full flex items-center justify-between gap-2 mb-3 group"
+      >
+        <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+          <Package size={20} className="text-blue-600" />
+          Synthèse par Enveloppe Budgétaire
+        </h3>
+        <span className="flex items-center gap-1 text-xs text-gray-400 group-hover:text-gray-600 transition-colors flex-shrink-0">
+          {isOpen ? 'Réduire' : 'Afficher'}
+          {isOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+        </span>
+      </button>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {isOpen && <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {usedEnveloppes.map((enveloppe) => {
           const totals = calculateEnveloppeTotal(enveloppe);
           const disponible = calculateAvailable(totals.budget, totals.depense, totals.engagement);
@@ -137,7 +147,7 @@ export const EnveloppesSummary = ({ projects, calculateEnveloppeTotal, getUsedEn
             </div>
           );
         })}
-      </div>
+      </div>}
     </div>
   );
 };

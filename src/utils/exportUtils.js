@@ -99,6 +99,7 @@ export const exportOpexTemplate = () => {
 export const exportCapexTemplate = () => {
   const template = [
     {
+      enveloppe: 'Infrastructure',
       project: 'Exemple Projet',
       budgetTotal: 500000,
       depense: 0,
@@ -110,7 +111,7 @@ export const exportCapexTemplate = () => {
     }
   ];
 
-  const headers = ['project', 'budgetTotal', 'depense', 'engagement', 'dateDebut', 'dateFin', 'status', 'notes'];
+  const headers = ['enveloppe', 'project', 'budgetTotal', 'depense', 'engagement', 'dateDebut', 'dateFin', 'status', 'notes'];
   const csvContent = [
     headers.join(','),
     ...template.map(row => headers.map(header => {

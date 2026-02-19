@@ -176,6 +176,7 @@ export const importCapexFromCSV = async (file, existingProjects = []) => {
 
       // Construire l'objet projet
       const projectData = {
+        enveloppe: sanitizeString(row.enveloppe),
         project: sanitizeString(row.project),
         budgetTotal: parseNumber(row.budgetTotal, 0),
         depense: parseNumber(row.depense, 0),

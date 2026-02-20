@@ -39,7 +39,7 @@ const CAPEX_COL_KEYS = ['enveloppe', 'projet', 'statut', 'budget', 'depense', 'e
 
 export const CapexTable = ({ projects, totals, orders = [], onEdit, onDelete, onAdd, onImport, calculateEnveloppeTotal, getUsedEnveloppes }) => {
   const permissions = usePermissions();
-  const { settings } = useSettings();
+  const { settings, addCapexEnveloppe } = useSettings();
   const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, project: null });
   const [importModalOpen, setImportModalOpen] = useState(false);
 
@@ -89,10 +89,14 @@ export const CapexTable = ({ projects, totals, orders = [], onEdit, onDelete, on
   const handleImport = useCallback(async (file) => {
     const result = await importCapexFromCSV(file, projects);
     if (result.success && result.data) {
-      result.data.forEach(project => { onImport(project); });
+      result.data.forEach(project => {
+        onImport(project);
+        // Mettre à jour le référentiel des enveloppes avec les nouvelles valeurs importées
+        if (project.enveloppe) addCapexEnveloppe(project.enveloppe);
+      });
     }
     return result;
-  }, [projects, onImport]);
+  }, [projects, onImport, addCapexEnveloppe]);
 
   const thBase = "px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-semibold text-gray-700 whitespace-nowrap relative";
   const tdBase = "px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm whitespace-nowrap overflow-hidden text-ellipsis";

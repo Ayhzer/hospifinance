@@ -6,8 +6,7 @@ import React, { useState, useEffect } from 'react';
 import { Save } from 'lucide-react';
 import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
-import { Input, TextArea } from '../common/Input';
-import { OPEX_CATEGORIES } from '../../constants/budgetConstants';
+import { Input, TextArea, Select } from '../common/Input';
 import { useSettings } from '../../contexts/SettingsContext';
 
 const EMPTY_FORM = {
@@ -86,30 +85,26 @@ export const OpexModal = ({ isOpen, onClose, onSave, editingSupplier }) => {
     >
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
-          <Input
+          <Select
             label="Fournisseur"
             required
             value={formData.supplier}
             onChange={(e) => handleChange('supplier', e.target.value)}
-            placeholder="Ex: Oracle Health"
+            options={[
+              { value: '', label: '-- Sélectionner --' },
+              ...(settings.opexSuppliers || []).map(s => ({ value: s, label: s }))
+            ]}
           />
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Catégorie <span className="text-red-500">*</span>
-            </label>
-            <input
-              list="categories"
-              value={formData.category}
-              onChange={(e) => handleChange('category', e.target.value)}
-              placeholder="Ex: Logiciels"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-            <datalist id="categories">
-              {OPEX_CATEGORIES.map((cat) => (
-                <option key={cat} value={cat} />
-              ))}
-            </datalist>
-          </div>
+          <Select
+            label="Catégorie"
+            required
+            value={formData.category}
+            onChange={(e) => handleChange('category', e.target.value)}
+            options={[
+              { value: '', label: '-- Sélectionner --' },
+              ...(settings.opexCategories || []).map(c => ({ value: c, label: c }))
+            ]}
+          />
         </div>
 
         <div className="grid grid-cols-3 gap-4">

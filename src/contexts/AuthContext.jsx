@@ -204,6 +204,27 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
+  const updateUserRole = useCallback(async (userId, newRole) => {
+    if (USE_API) {
+      try {
+        await api.updateUser(userId, { role: newRole });
+        setUsers(prev => prev.map(u => u.id === userId ? { ...u, role: newRole } : u));
+        return { success: true };
+      } catch (err) {
+        return { success: false, error: err.message };
+      }
+    } else {
+      const allUsers = loadAuthUsers() || [];
+      const target = allUsers.find(u => u.id === userId);
+      if (!target) return { success: false, error: 'Utilisateur introuvable' };
+      if (target.username === 'admin') return { success: false, error: 'Impossible de modifier le rôle du superadmin principal' };
+      const updated = allUsers.map(u => u.id === userId ? { ...u, role: newRole } : u);
+      saveAuthUsers(updated);
+      setUsers(updated);
+      return { success: true };
+    }
+  }, []);
+
   const changePassword = useCallback(async (userId, newPassword, currentPassword = null) => {
     if (USE_API) {
       try {
@@ -236,7 +257,7 @@ export const AuthProvider = ({ children }) => {
     <AuthContext.Provider value={{
       user, users, authLogs, loading,
       login, logout, addUser, deleteUser,
-      toggleUserDisabled, changePassword, clearLogs,
+      toggleUserDisabled, changePassword, updateUserRole, clearLogs,
       isAdmin, isSuperAdmin
     }}>
       {children}

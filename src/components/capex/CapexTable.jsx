@@ -12,7 +12,7 @@ import { importCapexFromCSV } from '../../utils/importUtils';
 import { usePermissions } from '../../contexts/PermissionsContext';
 import { useSettings } from '../../contexts/SettingsContext';
 import { useColumnResize } from '../../hooks/useColumnResize.jsx';
-import { useTableControls } from '../../hooks/useTableControls.jsx';
+import { useTableControls, FilterInput } from '../../hooks/useTableControls.jsx';
 import { useColumnOrder } from '../../hooks/useColumnOrder';
 import { STATUS_COLORS, ENVELOPPE_COLORS } from '../../constants/budgetConstants';
 import { Button } from '../common/Button';
@@ -70,7 +70,7 @@ export const CapexTable = ({ projects, totals, orders = [], onEdit, onDelete, on
   }, [projects, orderImpactByProject]);
 
   // Tri et filtrage
-  const { processedData, toggleSort, SortIcon, FilterInput, hasActiveFilters, clearFilters } = useTableControls(enrichedProjects, {
+  const { processedData, toggleSort, SortIcon, getFilterProps, hasActiveFilters, clearFilters } = useTableControls(enrichedProjects, {
     numericColumns: ['budgetTotal', 'depense', 'engagement', '_disponible', '_utilisation', '_totalDepense', '_totalEngagement'],
     dateColumns: ['dateDebut', 'dateFin'],
   });
@@ -173,10 +173,10 @@ export const CapexTable = ({ projects, totals, orders = [], onEdit, onDelete, on
   // Filter row cell per column key
   const renderFilterTh = (k) => {
     switch (k) {
-      case 'enveloppe': return <th key={k} className="px-1 py-1" {...getCellProps('enveloppe')}><FilterInput columnKey="enveloppe" placeholder="Enveloppe..." /></th>;
-      case 'projet':    return <th key={k} className="px-1 py-1" {...getCellProps('projet')}><FilterInput columnKey="project" placeholder="Projet..." /></th>;
-      case 'statut':    return <th key={k} className="px-1 py-1" {...getCellProps('statut')}><FilterInput columnKey="status" placeholder="Statut..." /></th>;
-      case 'notes':     return <th key={k} className="px-1 py-1" {...getCellProps('notes')}><FilterInput columnKey="notes" placeholder="Notes..." /></th>;
+      case 'enveloppe': return <th key={k} className="px-1 py-1" {...getCellProps('enveloppe')}><FilterInput {...getFilterProps('enveloppe', 'Enveloppe...')} /></th>;
+      case 'projet':    return <th key={k} className="px-1 py-1" {...getCellProps('projet')}><FilterInput {...getFilterProps('project', 'Projet...')} /></th>;
+      case 'statut':    return <th key={k} className="px-1 py-1" {...getCellProps('statut')}><FilterInput {...getFilterProps('status', 'Statut...')} /></th>;
+      case 'notes':     return <th key={k} className="px-1 py-1" {...getCellProps('notes')}><FilterInput {...getFilterProps('notes', 'Notes...')} /></th>;
       case 'budget':    return <th key={k} className="px-1 py-1" {...getCellProps('budget')}></th>;
       case 'depense':   return <th key={k} className="px-1 py-1" {...getCellProps('depense')}></th>;
       case 'engagement':return <th key={k} className="px-1 py-1" {...getCellProps('engagement')}></th>;
@@ -402,7 +402,7 @@ export const CapexTable = ({ projects, totals, orders = [], onEdit, onDelete, on
                 <tr className="bg-white border-b">
                   {colOrder.map(k => renderFilterTh(k))}
                   {customColumns.map(column => (
-                    <th key={column.id} className="px-1 py-1" {...getCellProps(column.id)}><FilterInput columnKey={column.id} placeholder={`${column.name}...`} /></th>
+                    <th key={column.id} className="px-1 py-1" {...getCellProps(column.id)}><FilterInput {...getFilterProps(column.id, `${column.name}...`)} /></th>
                   ))}
                   <th className="px-1 py-1" {...getCellProps('actions')}></th>
                 </tr>

@@ -3,7 +3,7 @@
  */
 
 import React, { useState } from 'react';
-import { Settings, Palette, Columns, Shield, Users, RotateCcw, Save, FileText, Trash2, Github, RefreshCw, Upload, CheckCircle, XCircle, Database, AlertTriangle } from 'lucide-react';
+import { Settings, Palette, Columns, Shield, Users, RotateCcw, Save, FileText, Trash2, Github, RefreshCw, Upload, CheckCircle, XCircle, Database, AlertTriangle, Pencil, Plus, X } from 'lucide-react';
 import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
 import { ConfirmDialog } from '../common/ConfirmDialog';
@@ -19,6 +19,7 @@ const SETTINGS_TABS = [
   { id: 'columns', label: 'Colonnes', icon: Columns },
   { id: 'customColumns', label: 'Colonnes personnalisées', icon: Columns },
   { id: 'rules', label: 'Règles', icon: Shield },
+  { id: 'listes', label: 'Listes de choix', icon: Shield },
   { id: 'users', label: 'Utilisateurs', icon: Users },
   { id: 'logs', label: 'Logs', icon: FileText },
   { id: 'github', label: 'GitHub', icon: Github },
@@ -79,9 +80,104 @@ const LOG_TYPE_LABELS = {
   account_enabled: { label: 'Compte réactivé', color: 'text-blue-600', bg: 'bg-blue-50' }
 };
 
-export const SettingsPanel = ({ onClearOpex, onClearCapex }) => {
-  const { settings, isSettingsOpen, setIsSettingsOpen, updateColors, updateSettings, toggleOpexColumn, toggleCapexColumn, updateRules, resetSettings } = useSettings();
-  const { users, addUser, deleteUser, toggleUserDisabled, changePassword, isAdmin, isSuperAdmin, authLogs, clearLogs } = useAuth();
+// Éditeur de liste réutilisable
+const ListEditor = ({ title, description, items = [], onAdd, onRename, onRemove }) => {
+  const [newItem, setNewItem] = useState('');
+  const [editingItem, setEditingItem] = useState(null); // { original, value }
+  const [error, setError] = useState('');
+
+  const handleAdd = () => {
+    const trimmed = newItem.trim();
+    if (!trimmed) return;
+    if (items.includes(trimmed)) {
+      setError('Cet élément existe déjà');
+      setTimeout(() => setError(''), 3000);
+      return;
+    }
+    onAdd(trimmed);
+    setNewItem('');
+  };
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <h4 className="text-sm font-semibold text-gray-700">{title}</h4>
+        {description && <p className="text-xs text-gray-500 mt-0.5">{description}</p>}
+      </div>
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-xs">
+          {error}
+        </div>
+      )}
+      <div className="flex gap-2">
+        <input
+          type="text"
+          placeholder={`Nouvel élément...`}
+          value={newItem}
+          onChange={(e) => setNewItem(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
+          className="flex-1 px-3 py-1.5 border border-gray-300 rounded-lg text-sm"
+        />
+        <button
+          onClick={handleAdd}
+          className="flex items-center gap-1 px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          <Plus size={14} /> Ajouter
+        </button>
+      </div>
+      <div className="space-y-1">
+        {items.map(item => (
+          <div key={item} className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2">
+            {editingItem?.original === item ? (
+              <>
+                <input
+                  type="text"
+                  value={editingItem.value}
+                  onChange={(e) => setEditingItem(prev => ({ ...prev, value: e.target.value }))}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') { onRename(item, editingItem.value); setEditingItem(null); }
+                    else if (e.key === 'Escape') setEditingItem(null);
+                  }}
+                  className="flex-1 px-2 py-1 border border-blue-300 rounded text-sm"
+                  autoFocus
+                />
+                <button
+                  onClick={() => { onRename(item, editingItem.value); setEditingItem(null); }}
+                  className="px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700"
+                >OK</button>
+                <button
+                  onClick={() => setEditingItem(null)}
+                  className="p-1 text-gray-500 hover:bg-gray-200 rounded"
+                ><X size={12} /></button>
+              </>
+            ) : (
+              <>
+                <span className="flex-1 text-sm text-gray-800">{item}</span>
+                <button
+                  onClick={() => setEditingItem({ original: item, value: item })}
+                  className="p-1 text-blue-600 hover:bg-blue-50 rounded"
+                  title="Renommer"
+                ><Pencil size={14} /></button>
+                <button
+                  onClick={() => onRemove(item)}
+                  className="p-1 text-red-500 hover:bg-red-50 rounded"
+                  title="Supprimer"
+                ><Trash2 size={14} /></button>
+              </>
+            )}
+          </div>
+        ))}
+        {items.length === 0 && (
+          <p className="text-sm text-gray-400 italic text-center py-2">Aucun élément défini</p>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export const SettingsPanel = ({ onClearOpex, onClearCapex, onRenameEnveloppe, onRenameOpexSupplier, onRenameOpexCategory }) => {
+  const { settings, isSettingsOpen, setIsSettingsOpen, updateColors, updateSettings, toggleOpexColumn, toggleCapexColumn, updateRules, resetSettings, addCapexEnveloppe, renameCapexEnveloppe, removeCapexEnveloppe, addOpexSupplier, renameOpexSupplier, removeOpexSupplier, addOpexCategory, renameOpexCategory, removeOpexCategory } = useSettings();
+  const { users, addUser, deleteUser, toggleUserDisabled, changePassword, updateUserRole, isAdmin, isSuperAdmin, authLogs, clearLogs } = useAuth();
   const { canManageColumns } = usePermissions();
   const [activeSettingsTab, setActiveSettingsTab] = useState('appearance');
   const [newUsername, setNewUsername] = useState('');
@@ -90,10 +186,10 @@ export const SettingsPanel = ({ onClearOpex, onClearCapex }) => {
   const [userError, setUserError] = useState('');
   const [changePasswordId, setChangePasswordId] = useState(null);
   const [changePasswordValue, setChangePasswordValue] = useState('');
+  const [changeRoleId, setChangeRoleId] = useState(null);
   const [confirmPurge, setConfirmPurge] = useState(false);
   const [confirmClearOpex, setConfirmClearOpex] = useState(false);
   const [confirmClearCapex, setConfirmClearCapex] = useState(false);
-
   // ---- État GitHub ----
   const [ghConfig, setGhConfig] = useState(() => github.loadGithubConfig() || { enabled: false, token: '', owner: '', repo: '', branch: 'main', dataPath: 'data' });
   const [ghTestStatus, setGhTestStatus] = useState(null); // { success, message }
@@ -121,6 +217,16 @@ export const SettingsPanel = ({ onClearOpex, onClearCapex }) => {
     await changePassword(userId, changePasswordValue);
     setChangePasswordId(null);
     setChangePasswordValue('');
+  };
+
+  const handleChangeRole = async (userId, newRole) => {
+    if (!updateUserRole) return;
+    const result = await updateUserRole(userId, newRole);
+    if (!result.success) {
+      setUserError(result.error);
+      setTimeout(() => setUserError(''), 3000);
+    }
+    setChangeRoleId(null);
   };
 
   const handleDeleteUser = (userId) => {
@@ -208,8 +314,8 @@ export const SettingsPanel = ({ onClearOpex, onClearCapex }) => {
         {SETTINGS_TABS.filter(tab => {
           // Filtrer l'onglet colonnes personnalisées selon permissions
           if (tab.id === 'customColumns' && !canManageColumns) return false;
-          // Filtrer users et logs pour admins uniquement
-          if ((tab.id === 'users' || tab.id === 'logs') && !isAdmin) return false;
+          // Filtrer enveloppes, users et logs pour admins uniquement
+          if ((tab.id === 'users' || tab.id === 'logs' || tab.id === 'listes') && !isAdmin) return false;
           // Filtrer données pour superadmin uniquement
           if (tab.id === 'data' && !isSuperAdmin) return false;
           return true;
@@ -368,6 +474,38 @@ export const SettingsPanel = ({ onClearOpex, onClearCapex }) => {
           </div>
         )}
 
+        {/* Listes de choix (admin) */}
+        {activeSettingsTab === 'listes' && (
+          <div className="space-y-6">
+            <ListEditor
+              title="Fournisseurs OPEX"
+              description="Liste des fournisseurs disponibles dans le formulaire OPEX."
+              items={settings.opexSuppliers || []}
+              onAdd={addOpexSupplier}
+              onRename={(old, newName) => { renameOpexSupplier(old, newName); onRenameOpexSupplier?.(old, newName); }}
+              onRemove={removeOpexSupplier}
+            />
+            <div className="border-t border-gray-200" />
+            <ListEditor
+              title="Catégories OPEX"
+              description="Liste des catégories disponibles dans le formulaire OPEX."
+              items={settings.opexCategories || []}
+              onAdd={addOpexCategory}
+              onRename={(old, newName) => { renameOpexCategory(old, newName); onRenameOpexCategory?.(old, newName); }}
+              onRemove={removeOpexCategory}
+            />
+            <div className="border-t border-gray-200" />
+            <ListEditor
+              title="Enveloppes CAPEX"
+              description="Liste des enveloppes budgétaires disponibles dans le formulaire CAPEX."
+              items={settings.capexEnveloppes || []}
+              onAdd={addCapexEnveloppe}
+              onRename={(old, newName) => { renameCapexEnveloppe(old, newName); onRenameEnveloppe?.(old, newName); }}
+              onRemove={removeCapexEnveloppe}
+            />
+          </div>
+        )}
+
         {/* Colonnes personnalisées */}
         {activeSettingsTab === 'customColumns' && (
           <CustomColumnsManager />
@@ -456,16 +594,36 @@ export const SettingsPanel = ({ onClearOpex, onClearCapex }) => {
                               placeholder="Nouveau MDP"
                               value={changePasswordValue}
                               onChange={(e) => setChangePasswordValue(e.target.value)}
+                              onKeyDown={(e) => e.key === 'Enter' && handleChangePassword(u.id)}
                               className="px-2 py-1 border border-gray-300 rounded text-sm w-28"
+                              autoFocus
                             />
                             <Button variant="success" size="sm" onClick={() => handleChangePassword(u.id)}>OK</Button>
                             <Button variant="secondary" size="sm" onClick={() => { setChangePasswordId(null); setChangePasswordValue(''); }}>X</Button>
                           </div>
+                        ) : changeRoleId === u.id ? (
+                          <div className="flex gap-1 items-center">
+                            <select
+                              defaultValue={u.role}
+                              onChange={(e) => handleChangeRole(u.id, e.target.value)}
+                              className="px-2 py-1 border border-gray-300 rounded text-sm"
+                            >
+                              <option value="user">Utilisateur</option>
+                              <option value="admin">Administrateur</option>
+                            </select>
+                            <Button variant="secondary" size="sm" onClick={() => setChangeRoleId(null)}>X</Button>
+                          </div>
                         ) : (
                           <>
                             {canChangePassword && (
-                              <Button variant="secondary" size="sm" onClick={() => setChangePasswordId(u.id)}>
+                              <Button variant="secondary" size="sm" onClick={() => { setChangePasswordId(u.id); setChangeRoleId(null); }}>
                                 MDP
+                              </Button>
+                            )}
+                            {/* Modifier le rôle - superadmin uniquement, pas sur lui-même */}
+                            {isSuperAdmin && !isSuperAdminUser && (
+                              <Button variant="secondary" size="sm" onClick={() => { setChangeRoleId(u.id); setChangePasswordId(null); }}>
+                                Rôle
                               </Button>
                             )}
                             {/* Bouton activer/désactiver - pas sur le superadmin */}

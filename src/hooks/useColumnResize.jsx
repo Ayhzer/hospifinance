@@ -54,12 +54,16 @@ export const useColumnResize = (tableId, defaultWidths = {}) => {
       dragState.current = null;
       document.removeEventListener('mousemove', onMouseMove);
       document.removeEventListener('mouseup', onMouseUp);
+      document.removeEventListener('mouseleave', onMouseUp);
+      window.removeEventListener('blur', onMouseUp);
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
     };
 
     document.addEventListener('mousemove', onMouseMove);
     document.addEventListener('mouseup', onMouseUp);
+    document.addEventListener('mouseleave', onMouseUp);
+    window.addEventListener('blur', onMouseUp);
     document.body.style.cursor = 'col-resize';
     document.body.style.userSelect = 'none';
   }, [columnWidths, persist]);

@@ -557,6 +557,21 @@ const HospitalITFinanceDashboard = () => {
         <SettingsPanel
           onClearOpex={() => { clearAllOpex(); clearAllOpexOrders(); }}
           onClearCapex={() => { clearAllCapex(); clearAllCapexOrders(); }}
+          onRenameEnveloppe={(oldName, newName) => {
+            projects.forEach(p => {
+              if (p.enveloppe === oldName) updateProject({ ...p, enveloppe: newName });
+            });
+          }}
+          onRenameOpexSupplier={(oldName, newName) => {
+            suppliers.forEach(s => {
+              if (s.supplier === oldName) updateSupplier(s.id, { ...s, supplier: newName });
+            });
+          }}
+          onRenameOpexCategory={(oldName, newName) => {
+            suppliers.forEach(s => {
+              if (s.category === oldName) updateSupplier(s.id, { ...s, category: newName });
+            });
+          }}
         />
       </div>
     </div>

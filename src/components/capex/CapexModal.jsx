@@ -7,7 +7,7 @@ import { Save } from 'lucide-react';
 import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
 import { Input, TextArea, Select } from '../common/Input';
-import { PROJECT_STATUS, ENVELOPPES_CAPEX } from '../../constants/budgetConstants';
+import { PROJECT_STATUS } from '../../constants/budgetConstants';
 import { useSettings } from '../../contexts/SettingsContext';
 
 const EMPTY_FORM = {
@@ -27,13 +27,9 @@ const STATUS_OPTIONS = Object.values(PROJECT_STATUS).map((status) => ({
   label: status
 }));
 
-const ENVELOPPE_OPTIONS = ENVELOPPES_CAPEX.map((env) => ({
-  value: env,
-  label: env
-}));
-
 export const CapexModal = ({ isOpen, onClose, onSave, editingProject }) => {
   const { settings } = useSettings();
+  const enveloppes = settings.capexEnveloppes || [];
   const [formData, setFormData] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
 
@@ -106,7 +102,7 @@ export const CapexModal = ({ isOpen, onClose, onSave, editingProject }) => {
           required
           value={formData.enveloppe}
           onChange={(e) => handleChange('enveloppe', e.target.value)}
-          options={ENVELOPPE_OPTIONS}
+          options={enveloppes.map(env => ({ value: env, label: env }))}
         />
 
         <Input

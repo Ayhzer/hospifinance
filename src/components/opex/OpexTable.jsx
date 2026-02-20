@@ -12,7 +12,7 @@ import { importOpexFromCSV } from '../../utils/importUtils';
 import { usePermissions } from '../../contexts/PermissionsContext';
 import { useSettings } from '../../contexts/SettingsContext';
 import { useColumnResize } from '../../hooks/useColumnResize.jsx';
-import { useTableControls } from '../../hooks/useTableControls.jsx';
+import { useTableControls, FilterInput } from '../../hooks/useTableControls.jsx';
 import { useColumnOrder } from '../../hooks/useColumnOrder';
 import { Button } from '../common/Button';
 import { ProgressBar } from '../common/ProgressBar';
@@ -37,7 +37,7 @@ const OPEX_COL_KEYS = ['supplier', 'category', 'budgetAnnuel', 'depenseActuelle'
 export const OpexTable = ({ suppliers, totals, orders = [], onEdit, onDelete, onAdd, onImport, columnVisibility = {} }) => {
   const col = (key) => (columnVisibility || {})[key] !== false;
   const permissions = usePermissions();
-  const { settings } = useSettings();
+  const { settings, addOpexSupplier, addOpexCategory } = useSettings();
 
   const { getHeaderProps, getCellProps, ResizeHandle, resetAll } = useColumnResize('opex', OPEX_DEFAULT_WIDTHS);
   const { order: colOrder, resetOrder, getDragSourceProps, getDropProps, dropTarget } = useColumnOrder('opex', OPEX_COL_KEYS);
@@ -65,7 +65,7 @@ export const OpexTable = ({ suppliers, totals, orders = [], onEdit, onDelete, on
     });
   }, [suppliers, orderImpactBySupplier]);
 
-  const { processedData, toggleSort, SortIcon, FilterInput, hasActiveFilters, clearFilters } = useTableControls(enrichedSuppliers, {
+  const { processedData, toggleSort, SortIcon, getFilterProps, hasActiveFilters, clearFilters } = useTableControls(enrichedSuppliers, {
     numericColumns: ['budgetAnnuel', 'depenseActuelle', 'engagement', '_disponible', '_utilisation', '_totalDepense', '_totalEngagement'],
   });
 
@@ -80,9 +80,16 @@ export const OpexTable = ({ suppliers, totals, orders = [], onEdit, onDelete, on
 
   const handleImport = useCallback(async (file) => {
     const result = await importOpexFromCSV(file, suppliers);
-    if (result.success && result.data) result.data.forEach(s => onImport(s));
+    if (result.success && result.data) {
+      result.data.forEach(s => onImport(s));
+      // Mettre à jour les référentiels avec les nouvelles valeurs importées
+      result.data.forEach(s => {
+        if (s.supplier) addOpexSupplier(s.supplier);
+        if (s.category) addOpexCategory(s.category);
+      });
+    }
     return result;
-  }, [suppliers, onImport]);
+  }, [suppliers, onImport, addOpexSupplier, addOpexCategory]);
 
   const thBase = "px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-semibold text-gray-700 whitespace-nowrap relative";
   const tdBase = "px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm whitespace-nowrap overflow-hidden text-ellipsis";
@@ -147,14 +154,14 @@ export const OpexTable = ({ suppliers, totals, orders = [], onEdit, onDelete, on
 
   const renderFilterTh = (k) => {
     switch (k) {
-      case 'supplier':     return <th key="supplier" className="px-1 py-1" {...getCellProps('supplier')}><FilterInput columnKey="supplier" placeholder="Fournisseur..." /></th>;
-      case 'category':    return <th key="category" className="px-1 py-1" {...getCellProps('category')}><FilterInput columnKey="category" placeholder="Catégorie..." /></th>;
+      case 'supplier':     return <th key="supplier" className="px-1 py-1" {...getCellProps('supplier')}><FilterInput {...getFilterProps('supplier', 'Fournisseur...')} /></th>;
+      case 'category':    return <th key="category" className="px-1 py-1" {...getCellProps('category')}><FilterInput {...getFilterProps('category', 'Catégorie...')} /></th>;
       case 'budgetAnnuel':    return <th key="budgetAnnuel" className="px-1 py-1" {...getCellProps('budgetAnnuel')}></th>;
       case 'depenseActuelle': return <th key="depenseActuelle" className="px-1 py-1" {...getCellProps('depenseActuelle')}></th>;
       case 'engagement':  return <th key="engagement" className="px-1 py-1" {...getCellProps('engagement')}></th>;
       case 'disponible':  return <th key="disponible" className="px-1 py-1" {...getCellProps('disponible')}></th>;
       case 'utilisation': return <th key="utilisation" className="px-1 py-1" {...getCellProps('utilisation')}></th>;
-      case 'notes':       return <th key="notes" className="px-1 py-1" {...getCellProps('notes')}><FilterInput columnKey="notes" placeholder="Notes..." /></th>;
+      case 'notes':       return <th key="notes" className="px-1 py-1" {...getCellProps('notes')}><FilterInput {...getFilterProps('notes', 'Notes...')} /></th>;
       default: return null;
     }
   };
@@ -291,7 +298,7 @@ export const OpexTable = ({ suppliers, totals, orders = [], onEdit, onDelete, on
                 <tr className="bg-white border-b">
                   {visibleOrder.map(k => renderFilterTh(k))}
                   {customColumns.map(column => (
-                    <th key={column.id} className="px-1 py-1" {...getCellProps(column.id)}><FilterInput columnKey={column.id} placeholder={`${column.name}...`} /></th>
+                    <th key={column.id} className="px-1 py-1" {...getCellProps(column.id)}><FilterInput {...getFilterProps(column.id, `${column.name}...`)} /></th>
                   ))}
                   {col('actions') && <th className="px-1 py-1" {...getCellProps('actions')}></th>}
                 </tr>

@@ -7,8 +7,34 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { ChevronUp, ChevronDown, ChevronsUpDown, X } from 'lucide-react';
 
 /**
+ * Composant FilterInput stable — défini au niveau module pour éviter
+ * les re-montages (et donc la perte de focus) lors des changements de filtres.
+ * Usage : <FilterInput {...getFilterProps(columnKey, placeholder)} />
+ */
+export const FilterInput = React.memo(({ value, onChange, onClear, placeholder }) => (
+  <div className="relative">
+    <input
+      type="text"
+      value={value || ''}
+      onChange={onChange}
+      placeholder={placeholder || 'Filtrer...'}
+      className="w-full px-1.5 py-1 text-xs border border-gray-200 rounded bg-white focus:ring-1 focus:ring-blue-400 focus:border-blue-400 outline-none"
+      onClick={(e) => e.stopPropagation()}
+    />
+    {value && (
+      <button
+        onClick={onClear}
+        className="absolute right-1 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+      >
+        <X size={10} />
+      </button>
+    )}
+  </div>
+));
+
+/**
  * @param {Array} data - Les données à trier/filtrer
- * @param {Object} options - { numericColumns: string[], currencyColumns: string[] }
+ * @param {Object} options - { numericColumns: string[], dateColumns: string[] }
  */
 export const useTableControls = (data, options = {}) => {
   const { numericColumns = [], dateColumns = [] } = options;
@@ -43,6 +69,17 @@ export const useTableControls = (data, options = {}) => {
   const clearFilters = useCallback(() => {
     setFilters({});
   }, []);
+
+  /**
+   * Retourne les props à passer à <FilterInput> pour une colonne donnée.
+   * Utiliser : <FilterInput {...getFilterProps('colKey', 'Placeholder...')} />
+   */
+  const getFilterProps = useCallback((columnKey, placeholder = 'Filtrer...') => ({
+    value: filters[columnKey] || '',
+    onChange: (e) => setFilter(columnKey, e.target.value),
+    onClear: (e) => { e.stopPropagation(); setFilter(columnKey, ''); },
+    placeholder
+  }), [filters, setFilter]);
 
   // Données filtrées puis triées
   const processedData = useMemo(() => {
@@ -100,30 +137,6 @@ export const useTableControls = (data, options = {}) => {
       : <ChevronDown size={12} className="inline ml-1 text-blue-600" />;
   }, [sort]);
 
-  // Composant input de filtre pour une colonne
-  const FilterInput = useCallback(({ columnKey, placeholder = 'Filtrer...' }) => {
-    return (
-      <div className="relative">
-        <input
-          type="text"
-          value={filters[columnKey] || ''}
-          onChange={(e) => setFilter(columnKey, e.target.value)}
-          placeholder={placeholder}
-          className="w-full px-1.5 py-1 text-xs border border-gray-200 rounded bg-white focus:ring-1 focus:ring-blue-400 focus:border-blue-400 outline-none"
-          onClick={(e) => e.stopPropagation()}
-        />
-        {filters[columnKey] && (
-          <button
-            onClick={(e) => { e.stopPropagation(); setFilter(columnKey, ''); }}
-            className="absolute right-1 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-          >
-            <X size={10} />
-          </button>
-        )}
-      </div>
-    );
-  }, [filters, setFilter]);
-
   return {
     sort,
     filters,
@@ -133,6 +146,6 @@ export const useTableControls = (data, options = {}) => {
     clearFilters,
     processedData,
     SortIcon,
-    FilterInput
+    getFilterProps,
   };
 };

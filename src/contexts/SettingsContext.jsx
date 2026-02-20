@@ -7,6 +7,7 @@ import { createContext, useContext, useState, useEffect, useCallback } from 'rea
 import * as api from '../services/apiService';
 import { saveSettings, loadSettings } from '../services/storageService';
 import * as github from '../services/githubStorageService';
+import { ENVELOPPES_CAPEX, OPEX_CATEGORIES } from '../constants/budgetConstants';
 
 const USE_API = !!import.meta.env.VITE_API_URL;
 
@@ -34,7 +35,10 @@ const DEFAULT_SETTINGS = {
   },
   rules: { warningThreshold: 75, criticalThreshold: 90 },
   customColumns: { opex: [], capex: [] },
-  customDashboards: []
+  customDashboards: [],
+  capexEnveloppes: [...ENVELOPPES_CAPEX],
+  opexSuppliers: [],
+  opexCategories: [...OPEX_CATEGORIES]
 };
 
 const mergeSettings = (stored) => ({
@@ -48,7 +52,10 @@ const mergeSettings = (stored) => ({
     opex: stored.customColumns?.opex || [],
     capex: stored.customColumns?.capex || []
   },
-  customDashboards: stored.customDashboards || []
+  customDashboards: stored.customDashboards || [],
+  capexEnveloppes: stored.capexEnveloppes || [...ENVELOPPES_CAPEX],
+  opexSuppliers: stored.opexSuppliers || [],
+  opexCategories: stored.opexCategories || [...OPEX_CATEGORIES]
 });
 
 export const SettingsProvider = ({ children }) => {
@@ -220,6 +227,97 @@ export const SettingsProvider = ({ children }) => {
     });
   }, [persist]);
 
+  // --- Gestion des enveloppes CAPEX (admin uniquement) ---
+  const addCapexEnveloppe = useCallback((name) => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    setSettings(prev => {
+      if (prev.capexEnveloppes.includes(trimmed)) return prev;
+      const u = { ...prev, capexEnveloppes: [...prev.capexEnveloppes, trimmed] };
+      persist(u);
+      return u;
+    });
+  }, [persist]);
+
+  const renameCapexEnveloppe = useCallback((oldName, newName) => {
+    const trimmed = newName.trim();
+    if (!trimmed || trimmed === oldName) return;
+    setSettings(prev => {
+      const u = {
+        ...prev,
+        capexEnveloppes: prev.capexEnveloppes.map(e => e === oldName ? trimmed : e)
+      };
+      persist(u);
+      return u;
+    });
+  }, [persist]);
+
+  const removeCapexEnveloppe = useCallback((name) => {
+    setSettings(prev => {
+      const u = { ...prev, capexEnveloppes: prev.capexEnveloppes.filter(e => e !== name) };
+      persist(u);
+      return u;
+    });
+  }, [persist]);
+
+  const addOpexSupplier = useCallback((name) => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    setSettings(prev => {
+      if ((prev.opexSuppliers || []).includes(trimmed)) return prev;
+      const u = { ...prev, opexSuppliers: [...(prev.opexSuppliers || []), trimmed] };
+      persist(u);
+      return u;
+    });
+  }, [persist]);
+
+  const renameOpexSupplier = useCallback((oldName, newName) => {
+    const trimmed = newName.trim();
+    if (!trimmed || trimmed === oldName) return;
+    setSettings(prev => {
+      const u = { ...prev, opexSuppliers: (prev.opexSuppliers || []).map(e => e === oldName ? trimmed : e) };
+      persist(u);
+      return u;
+    });
+  }, [persist]);
+
+  const removeOpexSupplier = useCallback((name) => {
+    setSettings(prev => {
+      const u = { ...prev, opexSuppliers: (prev.opexSuppliers || []).filter(e => e !== name) };
+      persist(u);
+      return u;
+    });
+  }, [persist]);
+
+  const addOpexCategory = useCallback((name) => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    setSettings(prev => {
+      if ((prev.opexCategories || []).includes(trimmed)) return prev;
+      const u = { ...prev, opexCategories: [...(prev.opexCategories || []), trimmed] };
+      persist(u);
+      return u;
+    });
+  }, [persist]);
+
+  const renameOpexCategory = useCallback((oldName, newName) => {
+    const trimmed = newName.trim();
+    if (!trimmed || trimmed === oldName) return;
+    setSettings(prev => {
+      const u = { ...prev, opexCategories: (prev.opexCategories || []).map(e => e === oldName ? trimmed : e) };
+      persist(u);
+      return u;
+    });
+  }, [persist]);
+
+  const removeOpexCategory = useCallback((name) => {
+    setSettings(prev => {
+      const u = { ...prev, opexCategories: (prev.opexCategories || []).filter(e => e !== name) };
+      persist(u);
+      return u;
+    });
+  }, [persist]);
+
   const reorderDashboards = useCallback((fromIndex, toIndex) => {
     setSettings(prev => {
       const arr = [...(prev.customDashboards || [])];
@@ -237,6 +335,9 @@ export const SettingsProvider = ({ children }) => {
       updateSettings, updateColors, toggleOpexColumn, toggleCapexColumn,
       updateRules, resetSettings, addCustomColumn, removeCustomColumn, updateCustomColumn,
       addDashboard, updateDashboard, removeDashboard, reorderDashboards,
+      addCapexEnveloppe, renameCapexEnveloppe, removeCapexEnveloppe,
+      addOpexSupplier, renameOpexSupplier, removeOpexSupplier,
+      addOpexCategory, renameOpexCategory, removeOpexCategory,
       DEFAULT_SETTINGS
     }}>
       {children}

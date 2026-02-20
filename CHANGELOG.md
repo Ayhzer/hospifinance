@@ -7,6 +7,65 @@ et ce projet adhère au [Semantic Versioning](https://semver.org/lang/fr/).
 
 ---
 
+## [3.2.0] - 2026-02-20 - Référentiels Paramétrables & UX 📋
+
+### ✨ Nouveautés
+
+#### Listes de Choix Paramétrables
+- ✨ **Onglet "Listes de choix"** dans le panneau de paramétrage (admin uniquement)
+- 📋 **Référentiel Fournisseurs OPEX** — Ajout, renommage, suppression; renommage propage les modifications sur toutes les lignes existantes
+- 📋 **Référentiel Catégories OPEX** — Même fonctionnement; initialisé avec les catégories par défaut (`OPEX_CATEGORIES`)
+- 📋 **Référentiel Enveloppes CAPEX** — Déplacé depuis l'ancien onglet "Enveloppes", même interface unifiée
+- 🔄 **Composant `ListEditor`** réutilisable (ajout, édition inline, suppression, validation doublon)
+
+#### Import CSV → Référentiels
+- 📥 **OPEX** : les fournisseurs et catégories présents dans le CSV importé sont automatiquement ajoutés aux référentiels
+- 📥 **CAPEX** : les enveloppes présentes dans le CSV importé sont automatiquement ajoutées au référentiel
+- ♻️ Déduplication native — aucun doublon même si la valeur existe déjà
+
+#### Navigation — Onglets Déplaçables
+- 🖱️ **Tous les onglets réorganisables** par drag-and-drop (fixes + personnalisés)
+- 💾 **Ordre persisté** en `localStorage` (`hospifinance_tab_order`)
+- 🔄 Synchronisation automatique si des dashboards custom sont ajoutés/supprimés
+
+#### Gestion des Comptes
+- 👤 **Superadmin** : peut changer le rôle d'un utilisateur (bouton "Rôle" dans la liste)
+- 🔑 **Superadmin** : peut réinitialiser le mot de passe de n'importe quel compte
+- 🔐 `updateUserRole()` ajouté dans `AuthContext` (mode localStorage et API)
+
+### 🐛 Corrections
+
+#### Filtres de Colonnes
+- 🐛 **Perte de focus** lors de la saisie dans les filtres sous les en-têtes de colonnes
+- ✅ `FilterInput` extrait au niveau module comme `React.memo` stable — plus de remontage intempestif
+- ✅ `getFilterProps(columnKey, placeholder)` remplace l'ancienne prop `FilterInput` dynamique
+
+#### Sélection de Texte
+- 🐛 La sélection de texte disparaissait si la souris quittait la fenêtre pendant le redimensionnement d'une colonne
+- ✅ `useColumnResize` : cleanup sur `document.mouseleave` et `window.blur` en plus de `mouseup`
+
+### 🔧 Refactoring
+
+- `OpexModal` : champs Fournisseur et Catégorie convertis en `<Select>` alimentés par les référentiels settings
+- `CapexModal` : champ Enveloppe en `<Select>` alimenté par `settings.capexEnveloppes`
+- `SettingsContext` : ajout de `opexSuppliers`, `opexCategories` avec CRUD complet (6 nouvelles fonctions)
+- `ImportModal` : texte d'instructions mis à jour pour refléter la gestion dynamique des référentiels
+
+### 📚 Documentation
+
+- `README.md` — Réécriture complète v3.2, architecture à jour, nouvelle section "Listes de choix"
+- `CHANGELOG.md` — Ce fichier mis à jour
+- `ImportModal.jsx` — Instructions d'import actualisées (suppression des listes hardcodées)
+
+### 📊 Statistiques v3.2
+
+- **Fichiers modifiés** : 11 fichiers source
+- **Fonctions ajoutées** : 8 (6 CRUD référentiels + `updateUserRole` + `getFilterProps`)
+- **Composants** : `ListEditor` (nouveau composant local dans SettingsPanel)
+- **Bugs corrigés** : 2 (filtre focus, sélection texte)
+
+---
+
 ## [3.1.0] - 2026-02-09 - Pilotage Budgétaire Renforcé 📊
 
 ### 🔧 Améliorations

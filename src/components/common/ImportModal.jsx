@@ -73,13 +73,14 @@ export default function ImportModal({ isOpen, onClose, onImport, title, type }) 
     const instructions = {
       opex: [
         'Le fichier doit contenir les colonnes: supplier, category, budgetAnnuel, depenseActuelle, engagement, notes',
-        'Catégories valides: Logiciels, Licences, Support matériel, Maintenance, Cloud & Hébergement, Télécommunications, Services externes, Formation',
+        'Les fournisseurs et catégories importés sont ajoutés automatiquement aux référentiels (Paramètres > Listes de choix)',
         'Les montants doivent être des nombres positifs',
         'Les noms de fournisseurs doivent être uniques'
       ],
       capex: [
-        'Le fichier doit contenir les colonnes: project, budgetTotal, depense, engagement, dateDebut, dateFin, status, notes',
+        'Le fichier doit contenir les colonnes: project, enveloppe, budgetTotal, depense, engagement, dateDebut, dateFin, status, notes',
         'Statuts valides: Planifié, En cours, Terminé, Suspendu, Annulé',
+        'Les enveloppes importées sont ajoutées automatiquement aux référentiels (Paramètres > Listes de choix)',
         'Les dates doivent être au format YYYY-MM-DD',
         'La date de début doit être antérieure à la date de fin',
         'Les noms de projets doivent être uniques'

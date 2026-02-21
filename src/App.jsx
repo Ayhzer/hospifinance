@@ -1,6 +1,6 @@
 /**
  * Composant principal de l'application Hospifinance
- * Tableau de bord financier DSI - Version 3.0
+ * Tableau de bord financier DSI - Version 3.2
  */
 
 import { useState, useCallback, useRef } from 'react';

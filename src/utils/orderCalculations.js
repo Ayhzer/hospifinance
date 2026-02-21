@@ -36,15 +36,17 @@ export const computeOrderImpactByParent = (orders) => {
   orders.forEach(order => {
     const impact = ORDER_IMPACT[order.status];
     if (!impact) return;
+    if (!order.parentId && order.parentId !== 0) return; // ignorer les commandes sans parent valide
 
-    if (!byParent[order.parentId]) {
-      byParent[order.parentId] = { engagement: 0, depense: 0 };
+    const key = String(order.parentId);
+    if (!byParent[key]) {
+      byParent[key] = { engagement: 0, depense: 0 };
     }
 
     if (impact === 'engagement') {
-      byParent[order.parentId].engagement += Number(order.montant) || 0;
+      byParent[key].engagement += Number(order.montant) || 0;
     } else if (impact === 'depense') {
-      byParent[order.parentId].depense += Number(order.montant) || 0;
+      byParent[key].depense += Number(order.montant) || 0;
     }
   });
 

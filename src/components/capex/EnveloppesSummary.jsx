@@ -6,7 +6,7 @@ import React, { useState, useMemo } from 'react';
 import { ChevronDown, ChevronUp, Package } from 'lucide-react';
 import { formatCurrency } from '../../utils/formatters';
 import { calculateAvailable, calculateUsageRate } from '../../utils/calculations';
-import { ENVELOPPE_COLORS } from '../../constants/budgetConstants';
+import { getEnveloppeColor } from '../../constants/budgetConstants';
 import { ProgressBar } from '../common/ProgressBar';
 
 export const EnveloppesSummary = ({ projects, calculateEnveloppeTotal, getUsedEnveloppes }) => {
@@ -61,7 +61,7 @@ export const EnveloppesSummary = ({ projects, calculateEnveloppeTotal, getUsedEn
           const tauxUtilisation = calculateUsageRate(totals.budget, totals.depense, totals.engagement);
           const isExpanded = expandedEnveloppes.has(enveloppe);
           const enveloppeProjects = getEnveloppeProjects(enveloppe);
-          const colorClass = ENVELOPPE_COLORS[enveloppe] || ENVELOPPE_COLORS['Autre'];
+          const colorClass = getEnveloppeColor(enveloppe, usedEnveloppes);
 
           return (
             <div

@@ -81,7 +81,7 @@ const LOG_TYPE_LABELS = {
 };
 
 // Éditeur de liste réutilisable
-const ListEditor = ({ title, description, items = [], onAdd, onRename, onRemove }) => {
+const ListEditor = ({ title, description, items = [], onAdd, onRename, onRemove, checkUsed }) => {
   const [newItem, setNewItem] = useState('');
   const [editingItem, setEditingItem] = useState(null); // { original, value }
   const [error, setError] = useState('');
@@ -159,7 +159,14 @@ const ListEditor = ({ title, description, items = [], onAdd, onRename, onRemove 
                   title="Renommer"
                 ><Pencil size={14} /></button>
                 <button
-                  onClick={() => onRemove(item)}
+                  onClick={() => {
+                    if (checkUsed && checkUsed(item)) {
+                      setError(`"${item}" est utilisé dans des données existantes et ne peut pas être supprimé.`);
+                      setTimeout(() => setError(''), 4000);
+                      return;
+                    }
+                    onRemove(item);
+                  }}
                   className="p-1 text-red-500 hover:bg-red-50 rounded"
                   title="Supprimer"
                 ><Trash2 size={14} /></button>
@@ -190,6 +197,7 @@ export const SettingsPanel = ({ onClearOpex, onClearCapex, onRenameEnveloppe, on
   const [confirmPurge, setConfirmPurge] = useState(false);
   const [confirmClearOpex, setConfirmClearOpex] = useState(false);
   const [confirmClearCapex, setConfirmClearCapex] = useState(false);
+  const [confirmDeleteUser, setConfirmDeleteUser] = useState({ isOpen: false, userId: null, username: '' });
   // ---- État GitHub ----
   const [ghConfig, setGhConfig] = useState(() => github.loadGithubConfig() || { enabled: false, token: '', owner: '', repo: '', branch: 'main', dataPath: 'data' });
   const [ghTestStatus, setGhTestStatus] = useState(null); // { success, message }
@@ -229,12 +237,17 @@ export const SettingsPanel = ({ onClearOpex, onClearCapex, onRenameEnveloppe, on
     setChangeRoleId(null);
   };
 
-  const handleDeleteUser = (userId) => {
-    const result = deleteUser(userId);
+  const handleDeleteUser = (userId, username) => {
+    setConfirmDeleteUser({ isOpen: true, userId, username });
+  };
+
+  const handleDeleteUserConfirm = () => {
+    const result = deleteUser(confirmDeleteUser.userId);
     if (!result.success) {
       setUserError(result.error);
       setTimeout(() => setUserError(''), 3000);
     }
+    setConfirmDeleteUser({ isOpen: false, userId: null, username: '' });
   };
 
   // ---- Handlers GitHub ----
@@ -484,6 +497,7 @@ export const SettingsPanel = ({ onClearOpex, onClearCapex, onRenameEnveloppe, on
               onAdd={addOpexSupplier}
               onRename={(old, newName) => { renameOpexSupplier(old, newName); onRenameOpexSupplier?.(old, newName); }}
               onRemove={removeOpexSupplier}
+              checkUsed={(name) => (loadOpexData() || []).some(s => s.supplier === name)}
             />
             <div className="border-t border-gray-200" />
             <ListEditor
@@ -493,6 +507,7 @@ export const SettingsPanel = ({ onClearOpex, onClearCapex, onRenameEnveloppe, on
               onAdd={addOpexCategory}
               onRename={(old, newName) => { renameOpexCategory(old, newName); onRenameOpexCategory?.(old, newName); }}
               onRemove={removeOpexCategory}
+              checkUsed={(name) => (loadOpexData() || []).some(s => s.category === name)}
             />
             <div className="border-t border-gray-200" />
             <ListEditor
@@ -502,6 +517,7 @@ export const SettingsPanel = ({ onClearOpex, onClearCapex, onRenameEnveloppe, on
               onAdd={addCapexEnveloppe}
               onRename={(old, newName) => { renameCapexEnveloppe(old, newName); onRenameEnveloppe?.(old, newName); }}
               onRemove={removeCapexEnveloppe}
+              checkUsed={(name) => (loadCapexData() || []).some(p => p.enveloppe === name)}
             />
           </div>
         )}
@@ -641,7 +657,7 @@ export const SettingsPanel = ({ onClearOpex, onClearCapex, onRenameEnveloppe, on
                               <Button
                                 variant="danger"
                                 size="sm"
-                                onClick={() => handleDeleteUser(u.id)}
+                                onClick={() => handleDeleteUser(u.id, u.username)}
                               >
                                 Suppr.
                               </Button>
@@ -849,6 +865,16 @@ export const SettingsPanel = ({ onClearOpex, onClearCapex, onRenameEnveloppe, on
           Fermer
         </Button>
       </div>
+
+      <ConfirmDialog
+        isOpen={confirmDeleteUser.isOpen}
+        onClose={() => setConfirmDeleteUser({ isOpen: false, userId: null, username: '' })}
+        onConfirm={handleDeleteUserConfirm}
+        title="Supprimer l'utilisateur"
+        message={`Êtes-vous sûr de vouloir supprimer le compte "${confirmDeleteUser.username}" ? Cette action est irréversible.`}
+        confirmText="Supprimer"
+        variant="danger"
+      />
 
       <ConfirmDialog
         isOpen={confirmPurge}

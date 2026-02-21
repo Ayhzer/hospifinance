@@ -56,7 +56,7 @@ export const ENVELOPPES_CAPEX = [
   'Autre'
 ];
 
-// Couleurs des enveloppes
+// Couleurs des enveloppes (fixes pour les enveloppes par défaut)
 export const ENVELOPPE_COLORS = {
   'Infrastructure': 'bg-blue-100 text-blue-800 border-blue-300',
   'Applications métier': 'bg-purple-100 text-purple-800 border-purple-300',
@@ -64,6 +64,31 @@ export const ENVELOPPE_COLORS = {
   'Poste de travail': 'bg-green-100 text-green-800 border-green-300',
   'Télécom': 'bg-orange-100 text-orange-800 border-orange-300',
   'Autre': 'bg-gray-100 text-gray-800 border-gray-300'
+};
+
+// Palette rotatoire pour les enveloppes personnalisées
+export const ENVELOPPE_COLOR_PALETTE = [
+  'bg-teal-100 text-teal-800 border-teal-300',
+  'bg-indigo-100 text-indigo-800 border-indigo-300',
+  'bg-pink-100 text-pink-800 border-pink-300',
+  'bg-amber-100 text-amber-800 border-amber-300',
+  'bg-cyan-100 text-cyan-800 border-cyan-300',
+  'bg-lime-100 text-lime-800 border-lime-300',
+  'bg-rose-100 text-rose-800 border-rose-300',
+  'bg-sky-100 text-sky-800 border-sky-300',
+];
+
+/**
+ * Retourne la couleur CSS d'une enveloppe.
+ * - Utilise les couleurs fixes pour les enveloppes par défaut.
+ * - Utilise la palette rotatoire (basée sur le nom) pour les enveloppes personnalisées.
+ */
+export const getEnveloppeColor = (enveloppe, allEnveloppes = []) => {
+  if (ENVELOPPE_COLORS[enveloppe]) return ENVELOPPE_COLORS[enveloppe];
+  // Palette rotatoire déterministe basée sur la position dans la liste
+  const idx = allEnveloppes.indexOf(enveloppe);
+  const paletteIdx = idx >= 0 ? idx % ENVELOPPE_COLOR_PALETTE.length : 0;
+  return ENVELOPPE_COLOR_PALETTE[paletteIdx];
 };
 
 // Configuration pour les exports

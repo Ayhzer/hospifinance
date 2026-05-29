@@ -4,16 +4,21 @@
  */
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { TrendingUp, DollarSign, Server, ShoppingCart, Pencil, Plus, LayoutDashboard } from 'lucide-react';
+import { TrendingUp, DollarSign, Server, ShoppingCart, Pencil, Plus, LayoutDashboard, BarChart2, AlertTriangle, Table2, Tag } from 'lucide-react';
 import { saveTabNames, loadTabNames } from '../../services/storageService';
 import { useSettings } from '../../contexts/SettingsContext';
 
 const DEFAULT_TABS = [
-  { id: 'overview', label: "Vue d'ensemble", icon: TrendingUp },
-  { id: 'opex', label: 'OPEX', icon: DollarSign },
-  { id: 'capex', label: 'CAPEX', icon: Server },
-  { id: 'ordersOpex', label: 'Commandes OPEX', icon: ShoppingCart },
-  { id: 'ordersCapex', label: 'Commandes CAPEX', icon: ShoppingCart }
+  { id: 'overview',    label: "Vue d'ensemble",   icon: TrendingUp },
+  { id: 'opex',        label: 'OPEX',              icon: DollarSign },
+  { id: 'capex',       label: 'CAPEX',             icon: Server },
+  { id: 'ordersOpex',  label: 'Commandes OPEX',    icon: ShoppingCart },
+  { id: 'ordersCapex', label: 'Commandes CAPEX',   icon: ShoppingCart },
+  { id: 'analytique',  label: 'Vue analytique',    icon: BarChart2 },
+  { id: 'anomalies',   label: 'Anomalies',         icon: AlertTriangle },
+  { id: 'projection',  label: 'Projection',        icon: TrendingUp },
+  { id: 'comptes',        label: 'Par comptes',        icon: Table2 },
+  { id: 'reclassement',  label: 'Reclassement',       icon: Tag },
 ];
 
 const FIXED_IDS = DEFAULT_TABS.map(t => t.id);

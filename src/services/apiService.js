@@ -174,6 +174,15 @@ export const deleteOpex = async (supplierId) => {
   return handleResponse(response);
 };
 
+export const replaceAllOpex = async (suppliers) => {
+  const response = await fetch(`${API_BASE_URL}/opex`, {
+    method: 'PUT',
+    headers: getHeaders(),
+    body: JSON.stringify(suppliers)
+  });
+  return handleResponse(response);
+};
+
 // ========================================
 // CAPEX
 // ========================================
@@ -199,6 +208,15 @@ export const updateCapex = async (projectId, projectData) => {
     method: 'PUT',
     headers: getHeaders(),
     body: JSON.stringify(projectData)
+  });
+  return handleResponse(response);
+};
+
+export const replaceAllCapex = async (projects) => {
+  const response = await fetch(`${API_BASE_URL}/capex`, {
+    method: 'PUT',
+    headers: getHeaders(),
+    body: JSON.stringify(projects)
   });
   return handleResponse(response);
 };

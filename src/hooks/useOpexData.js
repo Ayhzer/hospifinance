@@ -12,11 +12,8 @@ import { validateOpexData, parseNumber, sanitizeString } from '../utils/validato
 import * as api from '../services/apiService';
 import * as github from '../services/githubStorageService';
 
-const DEFAULT_OPEX_DATA = [
-  { id: 1, supplier: 'Oracle Health', category: 'Logiciels', budgetAnnuel: 500000, depenseActuelle: 375000, engagement: 50000, notes: 'Contrat de maintenance annuel' },
-  { id: 2, supplier: 'Microsoft', category: 'Licences', budgetAnnuel: 300000, depenseActuelle: 280000, engagement: 15000, notes: 'Azure + Microsoft 365' },
-  { id: 3, supplier: 'Dell Technologies', category: 'Support matériel', budgetAnnuel: 150000, depenseActuelle: 95000, engagement: 20000, notes: 'Contrat support serveurs' }
-];
+// Données viennent de l'import SAGE — pas de jeu de démo
+const DEFAULT_OPEX_DATA = [];
 
 export const useOpexData = () => {
   const [suppliers, setSuppliers] = useState([]);
@@ -130,12 +127,15 @@ export const useOpexData = () => {
       Object.keys(supplierData).forEach(k => { if (k.startsWith('custom_')) customFields[k] = supplierData[k]; });
       const newSupplier = {
         id: Date.now() + Math.random(),
-        supplier: sanitizeString(supplierData.supplier),
-        category: sanitizeString(supplierData.category),
-        budgetAnnuel: parseNumber(supplierData.budgetAnnuel, 0),
-        depenseActuelle: parseNumber(supplierData.depenseActuelle, 0),
-        engagement: parseNumber(supplierData.engagement, 0),
-        notes: sanitizeString(supplierData.notes),
+        supplier:           sanitizeString(supplierData.supplier),
+        category:           sanitizeString(supplierData.category),
+        compteOrdonnateur:  sanitizeString(supplierData.compteOrdonnateur || ''),
+        familleAnalytique:  sanitizeString(supplierData.familleAnalytique || ''),
+        budgetAnnuel:       parseNumber(supplierData.budgetAnnuel, 0),
+        depenseActuelle:    parseNumber(supplierData.depenseActuelle, 0),
+        engagement:         parseNumber(supplierData.engagement, 0),
+        montantRealise:     parseNumber(supplierData.montantRealise, 0),
+        notes:              sanitizeString(supplierData.notes),
         ...customFields
       };
       setSuppliers(prev => {
@@ -172,12 +172,15 @@ export const useOpexData = () => {
       Object.keys(supplierData).forEach(k => { if (k.startsWith('custom_')) customFields[k] = supplierData[k]; });
       const updated = {
         id,
-        supplier: sanitizeString(supplierData.supplier),
-        category: sanitizeString(supplierData.category),
-        budgetAnnuel: parseNumber(supplierData.budgetAnnuel, 0),
-        depenseActuelle: parseNumber(supplierData.depenseActuelle, 0),
-        engagement: parseNumber(supplierData.engagement, 0),
-        notes: sanitizeString(supplierData.notes),
+        supplier:           sanitizeString(supplierData.supplier),
+        category:           sanitizeString(supplierData.category),
+        compteOrdonnateur:  sanitizeString(supplierData.compteOrdonnateur || ''),
+        familleAnalytique:  sanitizeString(supplierData.familleAnalytique || ''),
+        budgetAnnuel:       parseNumber(supplierData.budgetAnnuel, 0),
+        depenseActuelle:    parseNumber(supplierData.depenseActuelle, 0),
+        engagement:         parseNumber(supplierData.engagement, 0),
+        montantRealise:     parseNumber(supplierData.montantRealise, 0),
+        notes:              sanitizeString(supplierData.notes),
         ...customFields
       };
       setSuppliers(prev => {
@@ -217,5 +220,23 @@ export const useOpexData = () => {
     setError(null);
   }, []);
 
-  return { suppliers, loading, error, addSupplier, updateSupplier, deleteSupplier, resetToDefaults, clearAll, setError };
+  const replaceAllSuppliers = useCallback(async (newSuppliers) => {
+    if (USE_API) {
+      try {
+        await api.replaceAllOpex(newSuppliers);
+        setSuppliers(newSuppliers);
+        setError(null);
+        return { success: true };
+      } catch (err) {
+        setError(err.message);
+        return { success: false, errors: [err.message] };
+      }
+    } else {
+      setSuppliers(newSuppliers);
+      setError(null);
+      return { success: true };
+    }
+  }, []);
+
+  return { suppliers, loading, error, addSupplier, updateSupplier, deleteSupplier, resetToDefaults, clearAll, replaceAllSuppliers, setError };
 };

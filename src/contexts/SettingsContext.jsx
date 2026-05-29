@@ -26,7 +26,10 @@ const DEFAULT_SETTINGS = {
   opexColumns: {
     supplier: true, category: true, budgetAnnuel: true,
     depenseActuelle: true, engagement: true, disponible: true,
-    utilisation: true, notes: true, actions: true
+    utilisation: true, notes: true, actions: true,
+    compteOrdonnateur: false, familleAnalytique: true,
+    chargeEngagee: true, tauxRealisation: true,
+    resteEngager: false, alerte: true,
   },
   capexColumns: {
     project: true, budgetTotal: true, depense: true,

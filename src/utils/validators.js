@@ -14,12 +14,8 @@ export const validateOpexData = (data) => {
     errors.push('Le nom du fournisseur est requis');
   }
 
-  if (!data.category || data.category.trim() === '') {
-    errors.push('La catégorie est requise');
-  }
-
-  if (!data.budgetAnnuel || parseFloat(data.budgetAnnuel) <= 0) {
-    errors.push('Le budget annuel doit être supérieur à 0');
+  if (data.budgetAnnuel && parseFloat(data.budgetAnnuel) < 0) {
+    errors.push('Le budget annuel ne peut pas être négatif');
   }
 
   if (data.depenseActuelle && parseFloat(data.depenseActuelle) < 0) {
@@ -48,8 +44,8 @@ export const validateCapexData = (data) => {
     errors.push('Le nom du projet est requis');
   }
 
-  if (!data.budgetTotal || parseFloat(data.budgetTotal) <= 0) {
-    errors.push('Le budget total doit être supérieur à 0');
+  if (data.budgetTotal && parseFloat(data.budgetTotal) < 0) {
+    errors.push('Le budget total ne peut pas être négatif');
   }
 
   if (data.depense && parseFloat(data.depense) < 0) {

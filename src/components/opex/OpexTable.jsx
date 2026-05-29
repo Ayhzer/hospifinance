@@ -5,7 +5,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { Edit2, Trash2, Download, Plus, FileUp, FileDown, RotateCcw, FilterX, GripVertical } from 'lucide-react';
 import { formatCurrency } from '../../utils/formatters';
-import { calculateAvailable, calculateUsageRate } from '../../utils/calculations';
+import { calculateAvailable, calculateUsageRate, calculateChargeEngagee, calculateTauxRealisation, calculateResteAEngager, getAlertLevelDSI } from '../../utils/calculations';
 import { computeOrderImpactByParent } from '../../utils/orderCalculations';
 import { exportToCSV, exportToJSON, exportOpexTemplate } from '../../utils/exportUtils';
 import { importOpexFromCSV } from '../../utils/importUtils';
@@ -22,19 +22,36 @@ import ImportModal from '../common/ImportModal';
 const OPEX_DEFAULT_WIDTHS = {
   supplier: 180,
   category: 140,
+  compteOrdonnateur: 120,
+  familleAnalytique: 150,
   budgetAnnuel: 120,
   depenseActuelle: 110,
   engagement: 110,
+  chargeEngagee: 120,
+  tauxRealisation: 110,
+  resteEngager: 120,
+  alerte: 80,
   disponible: 120,
   utilisation: 110,
   notes: 180,
   actions: 80,
 };
 
-/** Colonnes réordonnables (sans actions) */
-const OPEX_COL_KEYS = ['supplier', 'category', 'budgetAnnuel', 'depenseActuelle', 'engagement', 'disponible', 'utilisation', 'notes'];
+const ALERTE_CONFIG = {
+  critique:   { label: '🔴', className: 'bg-red-100 text-red-800 font-semibold' },
+  surveiller: { label: '🟠', className: 'bg-orange-100 text-orange-800' },
+  normal:     { label: '🟢', className: 'bg-green-100 text-green-700' },
+};
 
-export const OpexTable = ({ suppliers, totals, orders = [], onEdit, onDelete, onAdd, onImport, columnVisibility = {} }) => {
+/** Colonnes réordonnables (sans actions) */
+const OPEX_COL_KEYS = [
+  'supplier', 'category', 'compteOrdonnateur', 'familleAnalytique',
+  'budgetAnnuel', 'depenseActuelle', 'engagement',
+  'chargeEngagee', 'tauxRealisation', 'resteEngager', 'alerte',
+  'disponible', 'utilisation', 'notes',
+];
+
+export const OpexTable = ({ suppliers, totals, orders = [], onEdit, onDelete, onAdd, onImport, onSageImport, moteur = null, columnVisibility = {} }) => {
   const col = (key) => (columnVisibility || {})[key] !== false;
   const permissions = usePermissions();
   const { settings, addOpexSupplier, addOpexCategory } = useSettings();
@@ -57,16 +74,26 @@ export const OpexTable = ({ suppliers, totals, orders = [], onEdit, onDelete, on
   const enrichedSuppliers = useMemo(() => {
     return suppliers.map(supplier => {
       const impact = orderImpactBySupplier[String(supplier.id)] || { engagement: 0, depense: 0 };
-      const totalDepense = (Number(supplier.depenseActuelle) || 0) + impact.depense;
+      const totalDepense    = (Number(supplier.depenseActuelle) || 0) + impact.depense;
       const totalEngagement = (Number(supplier.engagement) || 0) + impact.engagement;
-      const disponible = calculateAvailable(supplier.budgetAnnuel, totalDepense, totalEngagement);
-      const utilisation = calculateUsageRate(supplier.budgetAnnuel, totalDepense, totalEngagement);
-      return { ...supplier, _totalDepense: totalDepense, _totalEngagement: totalEngagement, _disponible: disponible, _utilisation: utilisation };
+      const disponible      = calculateAvailable(supplier.budgetAnnuel, totalDepense, totalEngagement);
+      const utilisation     = calculateUsageRate(supplier.budgetAnnuel, totalDepense, totalEngagement);
+      const chargeEngagee   = calculateChargeEngagee(totalDepense, totalEngagement);
+      const tauxRealisation = calculateTauxRealisation(chargeEngagee, supplier.budgetAnnuel || 0);
+      const resteEngager    = calculateResteAEngager(supplier.budgetAnnuel || 0, chargeEngagee);
+      const alerte          = getAlertLevelDSI(tauxRealisation);
+      return {
+        ...supplier,
+        _totalDepense: totalDepense, _totalEngagement: totalEngagement,
+        _disponible: disponible, _utilisation: utilisation,
+        _chargeEngagee: chargeEngagee, _tauxRealisation: tauxRealisation,
+        _resteEngager: resteEngager, _alerte: alerte,
+      };
     });
   }, [suppliers, orderImpactBySupplier]);
 
   const { processedData, toggleSort, SortIcon, getFilterProps, hasActiveFilters, clearFilters } = useTableControls(enrichedSuppliers, {
-    numericColumns: ['budgetAnnuel', 'depenseActuelle', 'engagement', '_disponible', '_utilisation', '_totalDepense', '_totalEngagement'],
+    numericColumns: ['budgetAnnuel', 'depenseActuelle', 'engagement', '_disponible', '_utilisation', '_totalDepense', '_totalEngagement', '_chargeEngagee', '_tauxRealisation', '_resteEngager'],
   });
 
   const handleDeleteClick = useCallback((supplier) => {
@@ -148,6 +175,30 @@ export const OpexTable = ({ suppliers, totals, orders = [], onEdit, onDelete, on
         return <th key="notes" className={`${base} text-left cursor-pointer select-none`} {...getHeaderProps('notes')} {...drop} onClick={() => toggleSort('notes')}>
           {dropIndicator(k)}{grip(k)}Notes<SortIcon columnKey="notes" /><ResizeHandle columnKey="notes" />
         </th>;
+      case 'compteOrdonnateur':
+        return <th key="compteOrdonnateur" className={`${base} text-left cursor-pointer select-none`} {...getHeaderProps('compteOrdonnateur')} {...drop} onClick={() => toggleSort('compteOrdonnateur')}>
+          {dropIndicator(k)}{grip(k)}Compte<SortIcon columnKey="compteOrdonnateur" /><ResizeHandle columnKey="compteOrdonnateur" />
+        </th>;
+      case 'familleAnalytique':
+        return <th key="familleAnalytique" className={`${base} text-left cursor-pointer select-none`} {...getHeaderProps('familleAnalytique')} {...drop} onClick={() => toggleSort('familleAnalytique')}>
+          {dropIndicator(k)}{grip(k)}Famille<SortIcon columnKey="familleAnalytique" /><ResizeHandle columnKey="familleAnalytique" />
+        </th>;
+      case 'chargeEngagee':
+        return <th key="chargeEngagee" className={`${base} text-right cursor-pointer select-none`} {...getHeaderProps('chargeEngagee')} {...drop} onClick={() => toggleSort('_chargeEngagee')}>
+          {dropIndicator(k)}{grip(k)}Charge engagée<SortIcon columnKey="_chargeEngagee" /><ResizeHandle columnKey="chargeEngagee" />
+        </th>;
+      case 'tauxRealisation':
+        return <th key="tauxRealisation" className={`${base} text-right cursor-pointer select-none`} {...getHeaderProps('tauxRealisation')} {...drop} onClick={() => toggleSort('_tauxRealisation')}>
+          {dropIndicator(k)}{grip(k)}Tx réal.<SortIcon columnKey="_tauxRealisation" /><ResizeHandle columnKey="tauxRealisation" />
+        </th>;
+      case 'resteEngager':
+        return <th key="resteEngager" className={`${base} text-right cursor-pointer select-none`} {...getHeaderProps('resteEngager')} {...drop} onClick={() => toggleSort('_resteEngager')}>
+          {dropIndicator(k)}{grip(k)}Reste à engager<SortIcon columnKey="_resteEngager" /><ResizeHandle columnKey="resteEngager" />
+        </th>;
+      case 'alerte':
+        return <th key="alerte" className={`${base} text-center`} {...getHeaderProps('alerte')} {...drop}>
+          {dropIndicator(k)}{grip(k)}Alerte<ResizeHandle columnKey="alerte" />
+        </th>;
       default: return null;
     }
   };
@@ -161,7 +212,13 @@ export const OpexTable = ({ suppliers, totals, orders = [], onEdit, onDelete, on
       case 'engagement':  return <th key="engagement" className="px-1 py-1" {...getCellProps('engagement')}></th>;
       case 'disponible':  return <th key="disponible" className="px-1 py-1" {...getCellProps('disponible')}></th>;
       case 'utilisation': return <th key="utilisation" className="px-1 py-1" {...getCellProps('utilisation')}></th>;
-      case 'notes':       return <th key="notes" className="px-1 py-1" {...getCellProps('notes')}><FilterInput {...getFilterProps('notes', 'Notes...')} /></th>;
+      case 'notes':              return <th key="notes" className="px-1 py-1" {...getCellProps('notes')}><FilterInput {...getFilterProps('notes', 'Notes...')} /></th>;
+      case 'compteOrdonnateur':  return <th key="compteOrdonnateur" className="px-1 py-1" {...getCellProps('compteOrdonnateur')}><FilterInput {...getFilterProps('compteOrdonnateur', 'Compte...')} /></th>;
+      case 'familleAnalytique':  return <th key="familleAnalytique" className="px-1 py-1" {...getCellProps('familleAnalytique')}><FilterInput {...getFilterProps('familleAnalytique', 'Famille...')} /></th>;
+      case 'chargeEngagee':      return <th key="chargeEngagee" className="px-1 py-1" {...getCellProps('chargeEngagee')}></th>;
+      case 'tauxRealisation':    return <th key="tauxRealisation" className="px-1 py-1" {...getCellProps('tauxRealisation')}></th>;
+      case 'resteEngager':       return <th key="resteEngager" className="px-1 py-1" {...getCellProps('resteEngager')}></th>;
+      case 'alerte':             return <th key="alerte" className="px-1 py-1" {...getCellProps('alerte')}></th>;
       default: return null;
     }
   };
@@ -189,6 +246,24 @@ export const OpexTable = ({ suppliers, totals, orders = [], onEdit, onDelete, on
         </td>;
       case 'notes':
         return <td key="notes" className={`${tdBase} text-gray-600`} {...getCellProps('notes')}>{supplier.notes}</td>;
+      case 'compteOrdonnateur':
+        return <td key="compteOrdonnateur" className={`${tdBase} text-gray-600 font-mono text-xs`} {...getCellProps('compteOrdonnateur')}>{supplier.compteOrdonnateur || '—'}</td>;
+      case 'familleAnalytique':
+        return <td key="familleAnalytique" className={`${tdBase} text-gray-700`} {...getCellProps('familleAnalytique')}>{supplier.familleAnalytique || '—'}</td>;
+      case 'chargeEngagee':
+        return <td key="chargeEngagee" className={`${tdBase} text-right text-indigo-700 font-semibold`} {...getCellProps('chargeEngagee')}>{formatCurrency(supplier._chargeEngagee)}</td>;
+      case 'tauxRealisation':
+        return <td key="tauxRealisation" className={`${tdBase} text-right font-semibold ${supplier._tauxRealisation >= 85 ? 'text-red-600' : supplier._tauxRealisation >= 50 ? 'text-orange-500' : 'text-green-600'}`} {...getCellProps('tauxRealisation')}>
+          {supplier.budgetAnnuel > 0 ? `${supplier._tauxRealisation.toFixed(1)}%` : '—'}
+        </td>;
+      case 'resteEngager':
+        return <td key="resteEngager" className={`${tdBase} text-right font-semibold ${supplier._resteEngager < 0 ? 'text-red-600' : 'text-gray-700'}`} {...getCellProps('resteEngager')}>{supplier.budgetAnnuel > 0 ? formatCurrency(supplier._resteEngager) : '—'}</td>;
+      case 'alerte': {
+        const cfg = ALERTE_CONFIG[supplier._alerte] || ALERTE_CONFIG.normal;
+        return <td key="alerte" className={`${tdBase} text-center`} {...getCellProps('alerte')}>
+          <span className={`inline-block px-2 py-0.5 rounded text-xs ${cfg.className}`} title={supplier._alerte}>{cfg.label}</span>
+        </td>;
+      }
       default: return null;
     }
   };
@@ -202,7 +277,13 @@ export const OpexTable = ({ suppliers, totals, orders = [], onEdit, onDelete, on
       case 'engagement':   return <td key="engagement" className={`${tdBase} text-right text-yellow-600`}>{formatCurrency(totals.engagement)}</td>;
       case 'disponible':   return <td key="disponible" className={`${tdBase} text-right ${totals.disponible < 0 ? 'text-red-600' : 'text-green-600'}`}>{formatCurrency(totals.disponible)}</td>;
       case 'utilisation':  return <td key="utilisation" className={`${tdBase} text-center`}>{totals.tauxUtilisation.toFixed(1)}%</td>;
-      case 'notes':        return <td key="notes"></td>;
+      case 'notes':              return <td key="notes"></td>;
+      case 'compteOrdonnateur':  return <td key="compteOrdonnateur"></td>;
+      case 'familleAnalytique':  return <td key="familleAnalytique"></td>;
+      case 'chargeEngagee':      return <td key="chargeEngagee" className={`${tdBase} text-right text-indigo-700 font-semibold`}>{formatCurrency((totals.depense || 0) + (totals.engagement || 0))}</td>;
+      case 'tauxRealisation':    return <td key="tauxRealisation"></td>;
+      case 'resteEngager':       return <td key="resteEngager"></td>;
+      case 'alerte':             return <td key="alerte"></td>;
       default: return null;
     }
   };
@@ -357,6 +438,8 @@ export const OpexTable = ({ suppliers, totals, orders = [], onEdit, onDelete, on
         isOpen={importModalOpen}
         onClose={() => setImportModalOpen(false)}
         onImport={handleImport}
+        onSageImport={onSageImport}
+        moteur={moteur}
         title="Importer des Fournisseurs OPEX"
         type="opex"
       />

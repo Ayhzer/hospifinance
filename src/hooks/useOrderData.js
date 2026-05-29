@@ -100,14 +100,19 @@ export const useOrderData = (type = 'opex') => {
 
     const newOrder = {
       id: Date.now() + Math.random(),
-      parentId: orderData.parentId,
-      description: sanitizeString(orderData.description),
-      montant: parseNumber(orderData.montant, 0),
-      status: orderData.status || ORDER_STATUS.PENDING,
-      dateCommande: orderData.dateCommande || '',
-      dateFacture: orderData.dateFacture || '',
-      reference: sanitizeString(orderData.reference),
-      notes: sanitizeString(orderData.notes)
+      parentId:          orderData.parentId,
+      description:       sanitizeString(orderData.description),
+      montant:           parseNumber(orderData.montant, 0),
+      status:            orderData.status || ORDER_STATUS.PENDING,
+      dateCommande:      orderData.dateCommande || '',
+      dateFacture:       orderData.dateFacture || '',
+      dateReception:     orderData.dateReception || '',
+      reference:         sanitizeString(orderData.reference),
+      numeroMarche:      orderData.numeroMarche !== undefined ? Number(orderData.numeroMarche) : 0,
+      typeCommande:      sanitizeString(orderData.typeCommande || ''),
+      etatSage:          sanitizeString(orderData.etatSage || ''),
+      compteOrdonnateur: sanitizeString(orderData.compteOrdonnateur || ''),
+      notes:             sanitizeString(orderData.notes)
     };
 
     setOrders(prev => {
@@ -127,14 +132,19 @@ export const useOrderData = (type = 'opex') => {
 
     const updatedOrder = {
       id,
-      parentId: orderData.parentId,
-      description: sanitizeString(orderData.description),
-      montant: parseNumber(orderData.montant, 0),
-      status: orderData.status,
-      dateCommande: orderData.dateCommande || '',
-      dateFacture: orderData.dateFacture || '',
-      reference: sanitizeString(orderData.reference),
-      notes: sanitizeString(orderData.notes)
+      parentId:          orderData.parentId,
+      description:       sanitizeString(orderData.description),
+      montant:           parseNumber(orderData.montant, 0),
+      status:            orderData.status,
+      dateCommande:      orderData.dateCommande || '',
+      dateFacture:       orderData.dateFacture || '',
+      dateReception:     orderData.dateReception || '',
+      reference:         sanitizeString(orderData.reference),
+      numeroMarche:      orderData.numeroMarche !== undefined ? Number(orderData.numeroMarche) : 0,
+      typeCommande:      sanitizeString(orderData.typeCommande || ''),
+      etatSage:          sanitizeString(orderData.etatSage || ''),
+      compteOrdonnateur: sanitizeString(orderData.compteOrdonnateur || ''),
+      notes:             sanitizeString(orderData.notes)
     };
 
     setOrders(prev => {
@@ -156,6 +166,12 @@ export const useOrderData = (type = 'opex') => {
     setError(null);
   }, []);
 
+  const replaceAllOrders = useCallback((newOrders) => {
+    setOrders(newOrders);
+    setError(null);
+    return { success: true };
+  }, []);
+
   return {
     orders,
     loading,
@@ -164,6 +180,7 @@ export const useOrderData = (type = 'opex') => {
     updateOrder,
     deleteOrder,
     clearAll,
+    replaceAllOrders,
     setError
   };
 };

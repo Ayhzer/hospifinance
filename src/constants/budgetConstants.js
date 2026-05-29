@@ -2,11 +2,11 @@
  * Constantes pour la gestion budgétaire
  */
 
-// Seuils d'alerte budgétaire
+// Seuils d'alerte budgétaire — alignés sur SEUILS_ALERTE_DSI (analytiqueConstants)
 export const BUDGET_THRESHOLDS = {
-  CRITICAL: 90, // Alerte critique à 90%
-  WARNING: 75,  // Avertissement à 75%
-  SAFE: 0       // Zone sûre
+  CRITICAL: 85, // Alerte critique à 85%
+  WARNING:  50, // Surveillance à 50%
+  SAFE:      0  // Zone sûre
 };
 
 // Couleurs selon le taux d'utilisation
@@ -34,17 +34,22 @@ export const STATUS_COLORS = {
   [PROJECT_STATUS.CANCELLED]: 'bg-red-100 text-red-800'
 };
 
-// Catégories OPEX communes
+// Catégories OPEX — libellés comptes ordonnateurs HFAR/SAGE
 export const OPEX_CATEGORIES = [
-  'Logiciels',
-  'Licences',
-  'Support matériel',
-  'Maintenance',
-  'Cloud & Hébergement',
-  'Télécommunications',
-  'Services externes',
-  'Formation'
+  'LOC EQUIP MAT INFO',
+  'MAINT INFORM DIVERSES',
+  'REDEVANCES, BREVETS, LICENCES',
+  'TELEPHONIE DISTANCE / CALL CENTER',
+  'LIAISONS INFO OU SPECIALISEES',
+  'HON INFORMATIQUE',
+  'AFFRANCHISSEMENTS',
+  'TELEPHONE (CONSOMMATION)',
+  "ARCHIVAGES A L'EXT",
+  'COTISATIONS DSI',
+  'FOURNITURES / MATERIEL INFORMATIQUE',
 ];
+
+export const ANNEE_PILOTAGE = 2026;
 
 // Enveloppes budgétaires CAPEX
 export const ENVELOPPES_CAPEX = [

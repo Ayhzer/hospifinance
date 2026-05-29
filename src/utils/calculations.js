@@ -35,30 +35,34 @@ export const calculateUsageRate = (budget, depense, engagement) => {
  * @param {Object} orderImpact - Impact des commandes { engagement, depense } (optionnel)
  * @returns {Object} Totaux calculés
  */
+// Accumulation en centimes entiers pour éviter la dérive de flottants (BUG-003)
+const toCents = (v) => Math.round((Number(v) || 0) * 100);
+const fromCents = (c) => c / 100;
+
 export const calculateTotals = (items, keys = {
   budget: 'budgetAnnuel',
   depense: 'depenseActuelle',
   engagement: 'engagement'
 }, orderImpact = null) => {
-  const budget = items.reduce((sum, item) => sum + (Number(item[keys.budget]) || 0), 0);
-  let depense = items.reduce((sum, item) => sum + (Number(item[keys.depense]) || 0), 0);
-  let engagement = items.reduce((sum, item) => sum + (Number(item[keys.engagement]) || 0), 0);
+  const budgetC    = items.reduce((s, i) => s + toCents(i[keys.budget]),   0);
+  let   depenseC   = items.reduce((s, i) => s + toCents(i[keys.depense]),   0);
+  let   engagementC = items.reduce((s, i) => s + toCents(i[keys.engagement]), 0);
 
-  // Ajouter l'impact des commandes
   if (orderImpact) {
-    depense += orderImpact.depense || 0;
-    engagement += orderImpact.engagement || 0;
+    depenseC    += toCents(orderImpact.depense);
+    engagementC += toCents(orderImpact.engagement);
   }
 
-  const disponible = calculateAvailable(budget, depense, engagement);
-  const tauxUtilisation = calculateUsageRate(budget, depense, engagement);
+  const budget     = fromCents(budgetC);
+  const depense    = fromCents(depenseC);
+  const engagement = fromCents(engagementC);
 
   return {
     budget,
     depense,
     engagement,
-    disponible,
-    tauxUtilisation
+    disponible:      calculateAvailable(budget, depense, engagement),
+    tauxUtilisation: calculateUsageRate(budget, depense, engagement),
   };
 };
 
@@ -73,4 +77,38 @@ export const getAlertLevel = (rate, warningThreshold = 75, criticalThreshold = 9
   if (rate > criticalThreshold) return 'critical';
   if (rate > warningThreshold) return 'warning';
   return 'safe';
+};
+
+// ─── Calculs DSITM/HFAR ──────────────────────────────────────────────────────
+
+export const calculateChargeEngagee = (depenseActuelle, engagement) =>
+  (Number(depenseActuelle) || 0) + (Number(engagement) || 0);
+
+export const calculateTauxRealisation = (chargeEngagee, budgetEPRD) => {
+  if (!budgetEPRD || budgetEPRD === 0) return 0;
+  return (chargeEngagee / budgetEPRD) * 100;
+};
+
+export const calculateResteAEngager = (budgetEPRD, chargeEngagee) =>
+  (Number(budgetEPRD) || 0) - (Number(chargeEngagee) || 0);
+
+export const getAlertLevelDSI = (tauxRealisation) => {
+  if (tauxRealisation >= 85) return 'critique';
+  if (tauxRealisation >= 50) return 'surveiller';
+  return 'normal';
+};
+
+export const calculateProjections = (chargeEngagee, budgetEPRD, nbMoisRealises = 5) => {
+  const lineaire  = chargeEngagee * (12 / nbMoisRealises);
+  const bestCase  = chargeEngagee * 0.95;
+  const central   = chargeEngagee * 1.10;
+  const worstCase = chargeEngagee * 1.25;
+  return {
+    lineaire,
+    bestCase,
+    central,
+    worstCase,
+    resteAEngager:        calculateResteAEngager(budgetEPRD, chargeEngagee),
+    depassementWorstCase: worstCase - (Number(budgetEPRD) || 0),
+  };
 };

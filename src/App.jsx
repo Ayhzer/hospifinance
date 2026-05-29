@@ -3,7 +3,7 @@
  * Tableau de bord financier DSI - Version 3.2
  */
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { DollarSign, Server, LogOut, Settings } from 'lucide-react';
 import { useDashboardData } from './hooks/useDashboardData';
 import { DashboardBuilder } from './components/dashboard-builder/DashboardBuilder';
@@ -40,11 +40,19 @@ import { CapexModal } from './components/capex/CapexModal';
 import { OrderTable } from './components/orders/OrderTable';
 import { OrderModal } from './components/orders/OrderModal';
 import { AlertBanner } from './components/common/AlertBanner';
+import VueAnalytiqueIT from './components/analytique/VueAnalytiqueIT';
+import AnomaliesPanel from './components/analytique/AnomaliesPanel';
+import ProjectionAnnuelle from './components/analytique/ProjectionAnnuelle';
+import VueComptes from './components/analytique/VueComptes';
+import EprdBudgetEditor from './components/analytique/EprdBudgetEditor';
+import ReclassementPage from './components/reclassement/ReclassementPage';
+import { EPRD_STATIC } from './constants/analytiqueConstants';
+import { useReclassementData } from './hooks/useReclassementData';
 
 const HospitalITFinanceDashboard = () => {
   const { user, logout, loading: authLoading } = useAuth();
   const permissions = usePermissions();
-  const { settings, setIsSettingsOpen, addDashboard } = useSettings();
+  const { settings, setIsSettingsOpen, addDashboard, addOpexSupplier, addOpexCategory } = useSettings();
   const { handleTitleClick } = useSettingsShortcut();
 
   // États pour les onglets
@@ -80,6 +88,7 @@ const HospitalITFinanceDashboard = () => {
     updateSupplier,
     deleteSupplier,
     clearAll: clearAllOpex,
+    replaceAllSuppliers,
     setError: setOpexError
   } = useOpexData();
 
@@ -94,6 +103,7 @@ const HospitalITFinanceDashboard = () => {
     calculateEnveloppeTotal,
     getUsedEnveloppes,
     clearAll: clearAllCapex,
+    replaceAllProjects,
     setError: setCapexError
   } = useCapexData();
 
@@ -106,6 +116,7 @@ const HospitalITFinanceDashboard = () => {
     updateOrder: updateOpexOrder,
     deleteOrder: deleteOpexOrder,
     clearAll: clearAllOpexOrders,
+    replaceAllOrders: replaceAllOpexOrders,
     setError: setOpexOrdersError
   } = useOrderData('opex');
 
@@ -117,6 +128,7 @@ const HospitalITFinanceDashboard = () => {
     updateOrder: updateCapexOrder,
     deleteOrder: deleteCapexOrder,
     clearAll: clearAllCapexOrders,
+    replaceAllOrders: replaceAllCapexOrders,
     setError: setCapexOrdersError
   } = useOrderData('capex');
 
@@ -124,6 +136,72 @@ const HospitalITFinanceDashboard = () => {
   const opexTotals = useOpexTotals(suppliers, opexOrders);
   const capexTotals = useCapexTotals(projects, capexOrders);
   const consolidatedTotals = useConsolidatedTotals(opexTotals, capexTotals);
+
+  // Moteur de reclassement analytique
+  const {
+    moteur,
+    loading: reclassementLoading,
+    error: reclassementError,
+    addFournisseur,
+    updateFournisseur,
+    deleteFournisseur,
+    addRegleMultiNature,
+    updateRegleMultiNature,
+    deleteRegleMultiNature,
+    reorderReglesMultiNature,
+    addRegleMosCles,
+    updateRegleMosCles,
+    deleteRegleMosCles,
+    reorderReglesMosCles,
+    updateMappingCompte,
+  } = useReclassementData();
+
+  // Données EPRD — initialisées avec les données statiques, enrichies par l'API si disponible
+  const [eprdData, setEprdData] = useState(EPRD_STATIC);
+  useEffect(() => {
+    const apiUrl = import.meta.env.VITE_API_URL;
+    if (apiUrl) {
+      fetch(`${apiUrl}/eprd`)
+        .then(r => r.ok ? r.json() : null)
+        .then(data => { if (Array.isArray(data) && data.length > 0) setEprdData(data); })
+        .catch(() => {});
+    } else {
+      try {
+        const stored = localStorage.getItem('hospifinance_eprd');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed) && parsed.length > 0) setEprdData(parsed);
+        }
+      } catch {}
+    }
+  }, []);
+
+  // Handler reclassement bulk — met à jour familleAnalytique sur l'objet complet (pas de patch partiel)
+  const handleApplyReclassement = useCallback(async (enrichedSuppliers) => {
+    for (const s of enrichedSuppliers) {
+      await updateSupplier(s.id, { ...s });
+    }
+  }, [updateSupplier]);
+
+  // Handler import SAGE XLSX (reçu depuis ImportModal via OpexTable)
+  // MODE REPLACE : remplace toutes les données existantes (pas d'accumulation)
+  const handleSageImport = useCallback(async (parsed) => {
+    const { opexSuppliers = [], opexOrders = [], capexProjects = [], capexOrders = [] } = parsed;
+
+    // OPEX : remplacement complet (suppliers + orders)
+    await replaceAllSuppliers(opexSuppliers);
+    opexSuppliers.forEach(s => {
+      if (s.supplier) addOpexSupplier(s.supplier);
+      if (s.category) addOpexCategory(s.category);
+    });
+    replaceAllOpexOrders(opexOrders);
+
+    // CAPEX : remplacement complet
+    if (capexProjects.length > 0) {
+      await replaceAllProjects(capexProjects);
+      replaceAllCapexOrders(capexOrders);
+    }
+  }, [replaceAllSuppliers, replaceAllOpexOrders, replaceAllProjects, replaceAllCapexOrders, addOpexSupplier, addOpexCategory]);
 
   // Dashboard builder data
   const dashboardData = useDashboardData({
@@ -133,6 +211,9 @@ const HospitalITFinanceDashboard = () => {
 
   // État pour la modale de création de dashboard
   const [showCreateDashboard, setShowCreateDashboard] = useState(false);
+
+  // État pour l'éditeur EPRD
+  const [showEprdEditor, setShowEprdEditor] = useState(false);
 
   const handleCreateDashboard = useCallback((name) => {
     const id = `dash_${Date.now()}`;
@@ -435,6 +516,8 @@ const HospitalITFinanceDashboard = () => {
             onDelete={handleDeleteOpex}
             onAdd={handleAddOpex}
             onImport={handleImportOpex}
+            onSageImport={handleSageImport}
+            moteur={moteur}
             columnVisibility={settings.opexColumns}
           />
         )}
@@ -480,6 +563,59 @@ const HospitalITFinanceDashboard = () => {
             onEdit={handleEditCapexOrder}
             onDelete={handleDeleteCapexOrder}
             onAdd={handleAddCapexOrder}
+          />
+        )}
+
+        {/* Onglet Vue analytique */}
+        {activeTab === 'analytique' && (
+          <div className="space-y-4">
+            <div className="flex justify-end">
+              <button
+                onClick={() => setShowEprdEditor(true)}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium flex items-center gap-2"
+              >
+                Gérer les budgets EPRD
+              </button>
+            </div>
+            <VueAnalytiqueIT suppliers={suppliers} eprd={eprdData} />
+          </div>
+        )}
+
+        {/* Onglet Anomalies */}
+        {activeTab === 'anomalies' && (
+          <AnomaliesPanel suppliers={suppliers} orders={opexOrders} eprd={eprdData} />
+        )}
+
+        {/* Onglet Projection */}
+        {activeTab === 'projection' && (
+          <ProjectionAnnuelle suppliers={suppliers} orders={opexOrders} eprd={eprdData} nbMoisRealises={5} />
+        )}
+
+        {/* Onglet Vue par comptes */}
+        {activeTab === 'comptes' && (
+          <VueComptes suppliers={suppliers} eprd={eprdData} />
+        )}
+
+        {/* Onglet Reclassement analytique */}
+        {activeTab === 'reclassement' && (
+          <ReclassementPage
+            moteur={moteur}
+            loading={reclassementLoading}
+            error={reclassementError}
+            suppliers={suppliers}
+            onAddFournisseur={addFournisseur}
+            onUpdateFournisseur={updateFournisseur}
+            onDeleteFournisseur={deleteFournisseur}
+            onAddRegleMultiNature={addRegleMultiNature}
+            onUpdateRegleMultiNature={updateRegleMultiNature}
+            onDeleteRegleMultiNature={deleteRegleMultiNature}
+            onReorderReglesMultiNature={reorderReglesMultiNature}
+            onAddRegleMosCles={addRegleMosCles}
+            onUpdateRegleMosCles={updateRegleMosCles}
+            onDeleteRegleMosCles={deleteRegleMosCles}
+            onReorderReglesMosCles={reorderReglesMosCles}
+            onUpdateMappingCompte={updateMappingCompte}
+            onApplyReclassement={handleApplyReclassement}
           />
         )}
 
@@ -546,6 +682,17 @@ const HospitalITFinanceDashboard = () => {
           parentNameKey="project"
         />
 
+        {/* Éditeur EPRD */}
+        {showEprdEditor && (
+          <EprdBudgetEditor
+            eprd={eprdData}
+            onUpdated={(compte, budget) => {
+              setEprdData(prev => prev.map(e => e.compteOrdonnateur === compte ? { ...e, budgetEPRD: budget } : e));
+            }}
+            onClose={() => setShowEprdEditor(false)}
+          />
+        )}
+
         {/* Modale création de dashboard */}
         <CreateDashboardModal
           isOpen={showCreateDashboard}
@@ -559,7 +706,7 @@ const HospitalITFinanceDashboard = () => {
           onClearCapex={() => { clearAllCapex(); clearAllCapexOrders(); }}
           onRenameEnveloppe={(oldName, newName) => {
             projects.forEach(p => {
-              if (p.enveloppe === oldName) updateProject({ ...p, enveloppe: newName });
+              if (p.enveloppe === oldName) updateProject(p.id, { ...p, enveloppe: newName });
             });
           }}
           onRenameOpexSupplier={(oldName, newName) => {

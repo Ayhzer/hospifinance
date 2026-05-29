@@ -8,7 +8,7 @@ export default defineConfig({
   base: process.env.NODE_ENV === 'production' ? '/hospifinance/' : '/',
   server: {
     port: 5173,
-    open: true,
+    open: false,
   },
   build: {
     outDir: 'dist',
